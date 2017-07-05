@@ -1,0 +1,6 @@
+installer python 2.7 (pas 3.x) https://www.python.org/download/releases/2.7/
+
+
+pour developer je recommende pycharm
+https://www.jetbrains.com/pycharm/download/#section=windows
+la community edition est gratuite
