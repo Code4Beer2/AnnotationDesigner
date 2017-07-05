@@ -56,7 +56,44 @@ class ListWidget(QtGui.QListWidget):
         super(ListWidget, self).__init__(parent)
 
 
-    #def
+
+
+class GraphicsView(QtGui.QGraphicsView):
+
+    imageDropCallback = None
+
+    def __init__(self, scene):
+        super(GraphicsView, self).__init__(scene)
+
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls():
+            e.accept()
+        else:
+            e.ignore()
+
+    def dragMoveEvent(self, e):
+        if e.mimeData().hasUrls():
+            e.setDropAction(QtCore.Qt.CopyAction)
+            e.accept()
+        else:
+            e.ignore()
+
+    def dropEvent(self, e):
+        if e.mimeData().hasUrls():
+            e.setDropAction(QtCore.Qt.CopyAction)
+            e.accept()
+
+            firstUrl =  e.mimeData().urls()[0]
+            fname = str(firstUrl.toLocalFile())
+
+            if self.imageDropCallback:
+                self.imageDropCallback(fname)
+        else:
+            e.ignore()
+
+
 
 #icon found at http://docs.wxwidgets.org/trunk/page_stockitems.html
 class MainWindow(QtGui.QMainWindow):
@@ -86,6 +123,9 @@ class MainWindow(QtGui.QMainWindow):
         self.readSettings()
 
     def iniActions(self):
+
+        self.setAcceptDrops(True)
+
         self.selectAllItemsAction = QtGui.QAction('Select all', self)
         self.selectAllItemsAction.setShortcut('Ctrl+A')
         self.selectAllItemsAction.setStatusTip('Select all annoations')
@@ -135,7 +175,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.initSceneAndView()
         self.initAnnotationsDock()
-        self.iniToolBar()
+        self.initToolBar()
         self.initMenuBar()
 
         self.setGeometry(300, 300, 640, 480)
@@ -145,7 +185,8 @@ class MainWindow(QtGui.QMainWindow):
         self.scene = QtGui.QGraphicsScene()
         self.scene.selectionChanged.connect(self.onSceneSelectionChanged)
 
-        self.view = QtGui.QGraphicsView(self.scene)
+        self.view = GraphicsView(self.scene)
+        self.view.imageDropCallback = self.onViewImageDrop
         #self.view.setRubberBandSelectionMode()
         self.view.setInteractive(True)
         #self.view.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
@@ -179,7 +220,7 @@ class MainWindow(QtGui.QMainWindow):
         fileMenu.addSeparator()
         fileMenu.addAction(self.exitAction)
 
-    def iniToolBar(self):
+    def initToolBar(self):
         self.fontFamilyComboBox = QtGui.QFontComboBox()
         self.fontFamilyComboBox.setCurrentFont(self.userFont)
         self.fontFamilyComboBox.currentFontChanged.connect(self.onFontComboBoxChanged)
@@ -253,6 +294,10 @@ class MainWindow(QtGui.QMainWindow):
 
         self.updateAnnotationsTextList()
 
+
+    def onViewImageDrop(self, imagePath):
+        self.loadBackgroundImage(imagePath)
+
     def onTextListWidgetAddAction(self):
         newText = self.getUniqueNewAnnotationText('new')
         self.userPredefinedAnnotations.append(newText)
@@ -294,22 +339,26 @@ class MainWindow(QtGui.QMainWindow):
             item.setFlags (item.flags() | QtCore.Qt.ItemIsEditable)
             self.annotationsList.addItem(item)
 
-    def onLoadBackgroundImageAction(self):
-        openFilename, ext = QtGui.QFileDialog.getOpenFileName(self, 'Load image', '', MainWindow.getReadImageFormatWildcards(), '*.jpg')
-        if not openFilename: #user canceled
-            return
 
-        if(self.backgroundImageItem):
+    def loadBackgroundImage(self, path):
+        if self.backgroundImageItem:
             self.scene.removeItem(self.backgroundImageItem)
             self.backgroundImageItem = None
 
-        image =  QtGui.QImage(openFilename)
+        image =  QtGui.QImage(path)
         pixmap = QtGui.QPixmap(image)
 
         assert self.backgroundImageItem is None
         self.backgroundImageItem = QtGui.QGraphicsPixmapItem(pixmap)
         self.backgroundImageItem.setZValue(-100)
         self.scene.addItem(self.backgroundImageItem)
+
+    def onLoadBackgroundImageAction(self):
+        openFilename, ext = QtGui.QFileDialog.getOpenFileName(self, 'Load image', '', MainWindow.getReadImageFormatWildcards(), '*.jpg')
+        if not openFilename: #user canceled
+            return
+
+        self.loadBackgroundImage(openFilename)
 
 
     def addAnnotationTextItem(self, text, screenPos):
