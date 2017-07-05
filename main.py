@@ -1,8 +1,6 @@
 import sys
 from PySide import QtGui
 from PySide import QtCore
-#from PySide import Qt
-
 
 beginEditableEvent = QtCore.QEvent.registerEventType()
 
@@ -23,7 +21,7 @@ class TextItem(QtGui.QGraphicsTextItem):
         super(TextItem, self).focusOutEvent(event)
 
     #def keyReleaseEvent(self, event):
-    #    print "keyReleaseEvent"
+    #    print 'keyReleaseEvent'
     #    goEditable = QtCore.QEvent(QtCore.QEvent.Type(eventId))
     #    QtCore.QCoreApplication.instance().postEvent(self, goEditable)
     #    super(TextItem, self).keyReleaseEvent(event)
@@ -36,7 +34,7 @@ class TextItem(QtGui.QGraphicsTextItem):
 
     def event(self, ev):
         if ev.type() == beginEditableEvent and self.textInteractionFlags() == QtCore.Qt.NoTextInteraction:
-            print "goeditable"
+            print 'goeditable'
             self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
             #cursor = self.textCursor();
             #cursor.movePosition(QtGui.QTextCursor.End);
@@ -72,9 +70,6 @@ class ListWidget(QtGui.QListWidget):
     #def
 
 class MainWindow(QtGui.QMainWindow):
-    scene = None
-    view = None
-    annotationsList = None
     
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -85,23 +80,22 @@ class MainWindow(QtGui.QMainWindow):
         self.userFont = QtGui.QFont()
         self.mainWindowRect = QtCore.QRect(300, 300, 400, 600)
         self.colorDialogPosition = QtCore.QPoint(300, 300)
-        self.lastSaveFolder = "./"
-        self.lastSaveExt = ".png"
+        self.lastSaveFolder = './'
+        self.lastSaveExt = '.png'
 
         self.cmdStack = QtGui.QUndoStack()
 
         self.backgroundImageItem = None
 
-        self.userPredifinedTexts = list()
+        self.userAnnotations = list()
         for i in range(1,6):
-            self.userPredifinedTexts.append('defaultText%d' % i)
+            self.userAnnotations.append('defaultText%d' % i)
 
         self.iniActions()
         self.initUI()
         self.readSettings()
 
     def iniActions(self):
-
         self.selectAllItemsAction = QtGui.QAction('Select all items', self)
         self.selectAllItemsAction.setShortcut('Ctrl+A')
         self.selectAllItemsAction.setStatusTip('Select all items')
@@ -112,10 +106,10 @@ class MainWindow(QtGui.QMainWindow):
         self.addTextItemAction.setStatusTip('Add text item at mouse position')
         self.addTextItemAction.triggered.connect(self.onAddTextItemAction)
 
-        self.loadBackgroundImageActiob = QtGui.QAction('Load background image', self)
-        #self.addTextItemAction.setShortcut('Ctrl+L')
-        self.loadBackgroundImageActiob.setStatusTip('Load background image')
-        self.loadBackgroundImageActiob.triggered.connect(self.onLoadBackgroundImageAction)
+        self.loadBackgroundImageAction = QtGui.QAction('Load background image', self)
+        self.loadBackgroundImageAction.setShortcut('Ctrl+L')
+        self.loadBackgroundImageAction.setStatusTip('Load background image')
+        self.loadBackgroundImageAction.triggered.connect(self.onLoadBackgroundImageAction)
 
         self.clearImageAction = QtGui.QAction('Clear', self)
         self.clearImageAction.setShortcut('Ctrl+L')
@@ -145,41 +139,53 @@ class MainWindow(QtGui.QMainWindow):
 
         
     def initUI(self):
+        self.colorDialog = QtGui.QColorDialog()
+        self.colorDialog.finished.connect(self.onColorDialogFinished)
+        self.colorDialog.currentColorChanged.connect(self.onColorDialogChanged)
 
+        self.statusBar()
+
+        self.initSceneAndView()
+        self.initAnnotationsDock()
+        self.iniToolBar()
+        self.initMenuBar()
+
+        self.setGeometry(300, 300, 640, 480)
+        self.setWindowTitle('WinFlo32.exe')
+
+    def initSceneAndView(self):
         self.scene = QtGui.QGraphicsScene()
         self.scene.selectionChanged.connect(self.onSceneSelectionChanged)
+
         self.view = GraphicView(self.scene)
         #self.view.setRubberBandSelectionMode()
         self.view.setInteractive(True)
-
         #self.view.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
         self.view.setRubberBandSelectionMode(QtCore.Qt.IntersectsItemShape)
         self.view.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
-        #self.view.setStyleSheet("QGraphicsView { background-color: rgb(96.5%, 96.5%, 96.5%); }")
+        #self.view.setStyleSheet('QGraphicsView { background-color: rgb(96.5%, 96.5%, 96.5%); }')
         #self._noDrag = QGraphicsView.RubberBandDrag
         #self._yesDrag = QGraphicsView.ScrollHandDrag
 
         self.view.contextMenuEventCallback = self.onGraphicViewGetContextualMenu
         self.setCentralWidget(self.view)
 
+    def initMenuBar(self):
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(self.loadBackgroundImageAction)
+        fileMenu.addAction(self.saveAction)
+        fileMenu.addAction(self.exitAction)
 
-
-
+    def iniToolBar(self):
         self.fontFamilyComboBox = QtGui.QFontComboBox()
         self.fontFamilyComboBox.setCurrentFont(self.userFont)
         self.fontFamilyComboBox.currentFontChanged.connect(self.onFontComboBoxchanged)
-
-
 
         self.fontSizeComboBox = QtGui.QComboBox()
         for size in range(1, 200):
             self.fontSizeComboBox.addItem(str(size))
         self.fontSizeComboBox.activated.connect(self.onFontSizeComboBoxChanged)
-
-
-        self.colorDialog = QtGui.QColorDialog()
-        self.colorDialog.finished.connect(self.onColorDialogFinished)
-        self.colorDialog.currentColorChanged.connect(self.onColorDialogChanged)
 
         self.colorButton = QtGui.QPushButton()
         self.colorButton.clicked.connect(self.onShowColorDialog)
@@ -192,16 +198,9 @@ class MainWindow(QtGui.QMainWindow):
         self.zoomComboBox.activated.connect(self.onZoomComboBoxChanged)
         self.updateZoomComboBox()
 
-        self.initTextListDock()
-
-        self.statusBar()
-
-        menubar = self.menuBar()
-        fileMenu = menubar.addMenu('&File')
-        fileMenu.addAction(self.exitAction)
-
-        toolbar = self.addToolBar('Exit')
-        toolbar.setObjectName("toolbar")
+        toolbar = self.addToolBar('Toolbar')
+        toolbar.setObjectName('toolbar')
+        toolbar.addAction(self.loadBackgroundImageAction)
         toolbar.addAction(self.exitAction)
         toolbar.addAction(self.saveAction)
         toolbar.addAction(self.clearImageAction)
@@ -213,37 +212,32 @@ class MainWindow(QtGui.QMainWindow):
         toolbar.addAction(self.fitToContentAction)
         toolbar.addWidget(self.zoomComboBox)
 
-        self.setGeometry(300, 300, 640, 480)
-        self.setWindowTitle('WinFlo32.exe')
-
-    def initTextListDock(self):
-        annotationsDock = QtGui.QDockWidget("Annomations")
-        annotationsDock.setObjectName("annotationsDock")
+    def initAnnotationsDock(self):
+        annotationsDock = QtGui.QDockWidget('Annotations')
+        annotationsDock.setObjectName('annotationsDock')
         annotationsDock.setFeatures(0)
         container = QtGui.QWidget()
         containerLayout = QtGui.QVBoxLayout()
         container.setLayout(containerLayout);
 
         addNewTextButton = QtGui.QPushButton(container)
-        addNewTextButton.setText("add")
-        addNewTextButton.clicked.connect(self.onAddNewText)
+        addNewTextButton.setText('add')
+        addNewTextButton.clicked.connect(self.onAddNewTextButton)
         containerLayout.addWidget(addNewTextButton)
-
 
         self.annotationsList = QtGui.QListWidget(container)
 
-        deleteSelectionAction = QtGui.QAction("delete", self.annotationsList)
+        deleteSelectionAction = QtGui.QAction('delete', self.annotationsList)
         deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
         deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         deleteSelectionAction.triggered.connect(self.onTextListWidgetDeleteSelectionAction)
         self.annotationsList.addAction(deleteSelectionAction)
 
-        addTextAction = QtGui.QAction("add", self.annotationsList)
-        addTextAction.setShortcut("+")
+        addTextAction = QtGui.QAction('add', self.annotationsList)
+        addTextAction.setShortcut('+')
         addTextAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         addTextAction.triggered.connect(self.onTextListWidgetAddAction)
         self.annotationsList.addAction(addTextAction)
-
 
         self.annotationsList.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.annotationsList.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
@@ -253,55 +247,53 @@ class MainWindow(QtGui.QMainWindow):
         annotationsDock.setWidget(container)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, annotationsDock)
 
-        self.updatePredifinedTextList()
+        self.updateAnnotationsTextList()
 
     def onTextListWidgetAddAction(self):
-        newText = self.getUniqueNewText('new')
-        self.userPredifinedTexts.append(newText)
-        self.updatePredifinedTextList()
+        newText = self.getUniqueNewAnnotationText('new')
+        self.userAnnotations.append(newText)
+        self.updateAnnotationsTextList()
 
     def onTextListWidgetDeleteSelectionAction(self):
-        print "onTextListWidgetDeleteSelectionAction"
+        print 'onTextListWidgetDeleteSelectionAction'
         for selectedItem in self.annotationsList.selectedItems():
-            self.userPredifinedTexts.remove(selectedItem.text())
-        self.updatePredifinedTextList()
+            self.userAnnotations.remove(selectedItem.text())
+        self.updateAnnotationsTextList()
 
-    def getUniqueNewText(self, text):
+    def getUniqueNewAnnotationText(self, text):
         newText = text
         counter = 1
-        while newText in self.userPredifinedTexts:
+        while newText in self.userAnnotations:
             newText = '%s%d' % (text, counter)
             counter += 1
 
         return newText
 
-    def onAddNewText(self):
-
-        newText = self.getUniqueNewText('new')
-        self.userPredifinedTexts.append(newText)
-        self.updatePredifinedTextList()
+    def onAddNewTextButton(self):
+        newText = self.getUniqueNewAnnotationText('new')
+        self.userAnnotations.append(newText)
+        self.updateAnnotationsTextList()
 
     def onTextListItemChanged(self, item):
         modelIndex = self.annotationsList.indexFromItem(item)
         index = modelIndex.row()
         newText = item.text()
-        if newText not in self.userPredifinedTexts:
-            self.userPredifinedTexts[index] = newText
-        self.updatePredifinedTextList()
+        if newText not in self.userAnnotations:
+            self.userAnnotations[index] = newText
+        self.updateAnnotationsTextList()
 
-    def updatePredifinedTextList(self):
+    def updateAnnotationsTextList(self):
         self.annotationsList.clear()
-        for text_choice in self.userPredifinedTexts:
+        for text_choice in self.userAnnotations:
             item = QtGui.QListWidgetItem(text_choice)
             item.setFlags (item.flags() | QtCore.Qt.ItemIsEditable)
             self.annotationsList.addItem(item)
 
     def onLoadBackgroundImageAction(self):
-
         if(self.backgroundImageItem):
             self.scene.removeItem(self.backgroundImageItem)
 
-        openFilename, ext = QtGui.QFileDialog.getOpenFileName(self, "Load image", "", MainWindow.getReadImageFormatWildcards(), "*.png")
+        openFilename, ext = QtGui.QFileDialog.getOpenFileName(self, 'Load image', '', MainWindow.getReadImageFormatWildcards(), '*.png')
         image =  QtGui.QImage(openFilename)
         pixmap = QtGui.QPixmap(image)
 
@@ -310,56 +302,42 @@ class MainWindow(QtGui.QMainWindow):
         self.scene.addItem(self.backgroundImageItem)
 
 
-    def addTextItem(self, text):
+    def addAnnotationTextItem(self, text):
+        mousePos = self.view.mapFromGlobal(QtGui.QCursor.pos())
+        scenePos = self.view.mapToScene(mousePos)
+
         textItem = TextItem()
         textItem.setPlainText(text)
         textItem.setFont(self.userFont)
         textItem.setDefaultTextColor(self.userColor)
         textItem.setFlag(QtGui.QGraphicsTextItem.ItemIsMovable)
         textItem.setFlag(QtGui.QGraphicsTextItem.ItemIsSelectable)
-
-        mousePos = self.view.mapFromGlobal(QtGui.QCursor.pos())
-        scenePos = self.view.mapToScene(mousePos)
-
-        #mousePos = self.view.mapFromGlobal()
         textItem.setPos(scenePos)
+
         self.scene.addItem(textItem)
 
     def onAddTextItemAction(self):
-        self.addTextItem("default text")
+        self.addAnnotationTextItem('default text')
 
-    def onPredifinedAnnotation(self, annotation):
+    def onPredifinedAnnotationMenuItem(self, annotation):
         print annotation
-        self.addTextItem(annotation)
+        self.addAnnotationTextItem(annotation)
 
-    def getPredifinedAnnotationMenu(self):
-        menu = QtGui.QMenu("SUB MENU")
-        for annotation in self.userPredifinedTexts:
+    def getPredifinedAnnotationsMenu(self):
+        menu = QtGui.QMenu('SUB MENU')
+        for annotation in self.userAnnotations:
             action = QtGui.QAction(annotation, menu)
-            action.triggered.connect(lambda arg=annotation: self.onPredifinedAnnotation(arg))
+            action.triggered.connect(lambda arg=annotation: self.onPredifinedAnnotationMenuItem(arg))
             menu.addAction(action)
         return menu
 
-
-
     def onGraphicViewGetContextualMenu(self, event):
-
-
-        subMenu = self.getPredifinedAnnotationMenu()
+        subMenu = self.getPredifinedAnnotationsMenu()
         self.addTextItemAction.setMenu(subMenu)
 
         menu = QtGui.QMenu(self)
-        menu.addAction(self.loadBackgroundImageActiob)
+        menu.addAction(self.loadBackgroundImageAction)
         menu.addAction(self.addTextItemAction)
-
-
-        #menu.addMenu(subMenu)
-
-
-
-
-
-
         menu.exec_(event.globalPos())
 
 
@@ -428,7 +406,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @staticmethod
     def getImageFormatWildcards(formats):
-        #"Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)"
+        #'Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)'
         formatsWildcards = 'Images ('
         for format in formats:
             formatsWildcards += ('*.%s ') % format
@@ -450,12 +428,12 @@ class MainWindow(QtGui.QMainWindow):
     def onExitAction(self):
         self.close()
 
-    def onSaveImageAction(self):
 
-        formats = QtGui.QImageWriter.supportedImageFormats()
-        formatsWildcards = ""
-        for format in formats:
-            formatsWildcards += ('*.%s;;') % format
+    def onSaveImageAction(self):
+        imageFormats = QtGui.QImageWriter.supportedImageFormats()
+        formatsWildcards = ''
+        for imageFormat in imageFormats:
+            formatsWildcards += '*.%s;;' % imageFormat
 
 
         saveFilename, ext = QtGui.QFileDialog.getSaveFileName(self, 'Save file', self.lastSaveFolder, MainWindow.getSaveImageFormatWildcards(), '*.png')
@@ -464,14 +442,13 @@ class MainWindow(QtGui.QMainWindow):
         #items = self.scene.get_target_items()
         totalRect = QtCore.QRect(0, 0, 800, 400)
 
-
         #QtGui.QGraphicsPixmapItem.()
         if self.backgroundImageItem:
             totalRect = self.backgroundImageItem.sceneBoundingRect()
 
-
         savedPixmap = QtGui.QPixmap(totalRect.width(), totalRect.height())
         savedPixmapPainter = QtGui.QPainter(savedPixmap)
+        self.scene.clearSelection() #clear selection so we don't render selection boxes
         self.scene.render(savedPixmapPainter, totalRect, totalRect)
         cleanedExt = ext
         savedPixmap.save(saveFilename, cleanedExt)
@@ -496,10 +473,10 @@ class MainWindow(QtGui.QMainWindow):
     def onColorDialogChanged(self):
         self.userColor = self.colorDialog.currentColor()
         self.updateColorDialogAndColorButton()
-        self.updateSelection()
+        self.updateSelectionColorAndFont()
 
 
-    def updateSelection(self):
+    def updateSelectionColorAndFont(self):
          for item in self.scene.selectedItems():
             if isinstance(item, QtGui.QGraphicsTextItem):
                 item.setDefaultTextColor(self.userColor)
@@ -507,7 +484,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def onFontComboBoxchanged(self):
         self.userFont.setFamily(self.fontFamilyComboBox.currentFont().family())
-        self.updateSelection()
+        self.updateSelectionColorAndFont()
 
     def onZoomComboBoxChanged(self):
         zoomPercent = self.zoomValues[self.zoomComboBox.currentIndex()]
@@ -519,39 +496,39 @@ class MainWindow(QtGui.QMainWindow):
     def onFontSizeComboBoxChanged(self):
         pointSize = int(self.fontSizeComboBox.currentText())
         self.userFont.setPointSize(pointSize)
-        self.updateSelection()
+        self.updateSelectionColorAndFont()
 
-
-    def getSettings(self):
-        return QtCore.QSettings("FlorentinCorp", "WinFlo32")
+    @staticmethod
+    def getSettings():
+        return QtCore.QSettings('FlorentinCorp', 'WinFlo32')
 
     def saveSettings(self):
-        settings = self.getSettings()
-        settings.setValue("geometry", self.saveGeometry())
-        settings.setValue("windowState", self.saveState())
-        settings.setValue("color", self.userColor)
-        settings.setValue("font", self.userFont.toString())
-        settings.setValue("colorDialogPosition", self.colorDialogPosition)
-        settings.setValue("lastSaveFolder", self.lastSaveFolder)
-        settings.setValue("userPredifinedTexts", self.userPredifinedTexts)
+        settings = MainWindow.getSettings()
+        settings.setValue('geometry', self.saveGeometry())
+        settings.setValue('windowState', self.saveState())
+        settings.setValue('color', self.userColor)
+        settings.setValue('font', self.userFont.toString())
+        settings.setValue('colorDialogPosition', self.colorDialogPosition)
+        settings.setValue('lastSaveFolder', self.lastSaveFolder)
+        settings.setValue('userAnnotations', self.userAnnotations)
 
 
     def readSettings(self):
-        settings = self.getSettings()
-        self.restoreGeometry(settings.value("geometry"))
-        self.restoreState(settings.value("windowState"))
-        self.userColor = settings.value("color", self.userColor)
-        fontString = settings.value("font", "")
+        settings = MainWindow.getSettings()
+        self.restoreGeometry(settings.value('geometry'))
+        self.restoreState(settings.value('windowState'))
+        self.userColor = settings.value('color', self.userColor)
+        fontString = settings.value('font', '')
         if(isinstance(fontString, basestring)):
             self.userFont.fromString(fontString)
-        self.colorDialogPosition = settings.value("colorDialogPosition", self.colorDialogPosition)
-        self.lastSaveFolder = settings.value("lastSaveFolder", self.lastSaveFolder)
+        self.colorDialogPosition = settings.value('colorDialogPosition', self.colorDialogPosition)
+        self.lastSaveFolder = settings.value('lastSaveFolder', self.lastSaveFolder)
 
-        self.userPredifinedTexts = settings.value("userPredifinedTexts", self.userPredifinedTexts)
+        self.userAnnotations = settings.value('userAnnotations', self.userAnnotations)
 
         self.updateColorDialogAndColorButton()
         self.updateFontFamilyComboBoxAndSizeComboBox()
-        self.updatePredifinedTextList()
+        self.updateAnnotationsTextList()
 
     def updateFontFamilyComboBoxAndSizeComboBox(self):
         self.fontFamilyComboBox.setCurrentFont(self.userFont)
@@ -584,5 +561,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+        main()
+
+
 
