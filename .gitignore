@@ -1,6 +1,7 @@
-#folder we dont want
+#folder we don't want
 build
 .idea
+tmp
 
 # Windows image file caches
 Thumbs.db
