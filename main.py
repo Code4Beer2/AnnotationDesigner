@@ -34,7 +34,7 @@ class TextItem(QtGui.QGraphicsTextItem):
 
     def event(self, ev):
         if ev.type() == beginEditableEvent and self.textInteractionFlags() == QtCore.Qt.NoTextInteraction:
-            print 'goeditable'
+            #print 'goeditable'
             self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
             #cursor = self.textCursor();
             #cursor.movePosition(QtGui.QTextCursor.End);
@@ -45,21 +45,10 @@ class TextItem(QtGui.QGraphicsTextItem):
         return super(TextItem, self).event(ev)
 
 
-class GraphicView(QtGui.QGraphicsView):
-
-    def __init__(self, scene):
-        super(GraphicView, self).__init__(scene)
-
-        self.contextMenuEventCallback = None
-
-    def contextMenuEvent(self, event):
-        self.contextMenuEventCallback(event) # redirect event to callback
-
-
 class AddTextItemCmd(QtGui.QUndoCommand):
 
     def __init__(self, scene):
-        super(GraphicView, self).__init__(scene)
+        super(AddTextItemCmd, self).__init__(scene)
 
 
 class ListWidget(QtGui.QListWidget):
@@ -87,34 +76,34 @@ class MainWindow(QtGui.QMainWindow):
 
         self.backgroundImageItem = None
 
-        self.userAnnotations = list()
+        self.userPredefinedAnnotations = list()
         for i in range(1,6):
-            self.userAnnotations.append('defaultText%d' % i)
+            self.userPredefinedAnnotations.append('defaultText%d' % i)
 
         self.iniActions()
         self.initUI()
         self.readSettings()
 
     def iniActions(self):
-        self.selectAllItemsAction = QtGui.QAction('Select all items', self)
+        self.selectAllItemsAction = QtGui.QAction('Select all', self)
         self.selectAllItemsAction.setShortcut('Ctrl+A')
-        self.selectAllItemsAction.setStatusTip('Select all items')
+        self.selectAllItemsAction.setStatusTip('Select all annoations')
         self.selectAllItemsAction.triggered.connect(self.onSelectAllItemAction)
 
-        self.addTextItemAction = QtGui.QAction('Add text item', self)
+        self.addAnnotationItemAction = QtGui.QAction('Add annotation', self)
         #self.addTextItemAction.setShortcut('Ctrl+L')
-        self.addTextItemAction.setStatusTip('Add text item at mouse position')
-        self.addTextItemAction.triggered.connect(self.onAddTextItemAction)
+        self.addAnnotationItemAction.setStatusTip('Add annotation at mouse position')
+        self.addAnnotationItemAction.triggered.connect(self.onAddTextItemAction)
 
         self.loadBackgroundImageAction = QtGui.QAction('Load background image', self)
         self.loadBackgroundImageAction.setShortcut('Ctrl+L')
         self.loadBackgroundImageAction.setStatusTip('Load background image')
         self.loadBackgroundImageAction.triggered.connect(self.onLoadBackgroundImageAction)
 
-        self.clearImageAction = QtGui.QAction('Clear', self)
-        self.clearImageAction.setShortcut('Ctrl+L')
-        self.clearImageAction.setStatusTip('Exit application')
-        self.clearImageAction.triggered.connect(self.onClearImageAction)
+        self.clearAllAnnotationsItemAction = QtGui.QAction('Clear all', self)
+        self.clearAllAnnotationsItemAction.setShortcut('Ctrl+L')
+        self.clearAllAnnotationsItemAction.setStatusTip('Exit application')
+        self.clearAllAnnotationsItemAction.triggered.connect(self.onClearAllAnnotationsItemsAction)
 
         self.exitAction = QtGui.QAction('Exit', self)
         self.exitAction.setShortcut('Ctrl+Q')
@@ -126,16 +115,7 @@ class MainWindow(QtGui.QMainWindow):
         self.saveAction.setStatusTip('Save picture')
         self.saveAction.triggered.connect(self.onSaveImageAction)
 
-        self.fitToContentAction = QtGui.QAction('Fit', self)
-        self.fitToContentAction.setShortcut('Ctrl+F')
-        self.fitToContentAction.setStatusTip('Fit view to content')
-        self.fitToContentAction.triggered.connect(self.fitToContent)
 
-        self.deleteSelectionAction = QtGui.QAction('Delete', self)
-        self.deleteSelectionAction.setStatusTip('Delete selection')
-        self.deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
-        self.deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
-        self.deleteSelectionAction.triggered.connect(self.onDeleteSelectionAction)
 
         
     def initUI(self):
@@ -157,30 +137,43 @@ class MainWindow(QtGui.QMainWindow):
         self.scene = QtGui.QGraphicsScene()
         self.scene.selectionChanged.connect(self.onSceneSelectionChanged)
 
-        self.view = GraphicView(self.scene)
+        self.view = QtGui.QGraphicsView(self.scene)
         #self.view.setRubberBandSelectionMode()
         self.view.setInteractive(True)
         #self.view.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
         self.view.setRubberBandSelectionMode(QtCore.Qt.IntersectsItemShape)
         self.view.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
+        self.view.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         #self.view.setStyleSheet('QGraphicsView { background-color: rgb(96.5%, 96.5%, 96.5%); }')
         #self._noDrag = QGraphicsView.RubberBandDrag
         #self._yesDrag = QGraphicsView.ScrollHandDrag
 
-        self.view.contextMenuEventCallback = self.onGraphicViewGetContextualMenu
+        deleteSelectionAction = QtGui.QAction('Delete', self.view)
+        deleteSelectionAction.setStatusTip('Delete selection')
+        deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
+        deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
+        deleteSelectionAction.triggered.connect(self.onDeleteSelectionAction)
+
+        self.view.addAction(deleteSelectionAction)
+        self.view.addAction(self.loadBackgroundImageAction)
+        self.view.addAction(self.addAnnotationItemAction)
+        self.view.addAction(self.saveAction)
+
+
         self.setCentralWidget(self.view)
 
     def initMenuBar(self):
-        menubar = self.menuBar()
-        fileMenu = menubar.addMenu('&File')
+        mainMenuBar = self.menuBar()
+        fileMenu = mainMenuBar.addMenu('&File')
         fileMenu.addAction(self.loadBackgroundImageAction)
         fileMenu.addAction(self.saveAction)
+        fileMenu.addSeparator()
         fileMenu.addAction(self.exitAction)
 
     def iniToolBar(self):
         self.fontFamilyComboBox = QtGui.QFontComboBox()
         self.fontFamilyComboBox.setCurrentFont(self.userFont)
-        self.fontFamilyComboBox.currentFontChanged.connect(self.onFontComboBoxchanged)
+        self.fontFamilyComboBox.currentFontChanged.connect(self.onFontComboBoxChanged)
 
         self.fontSizeComboBox = QtGui.QComboBox()
         for size in range(1, 200):
@@ -203,13 +196,12 @@ class MainWindow(QtGui.QMainWindow):
         toolbar.addAction(self.loadBackgroundImageAction)
         toolbar.addAction(self.exitAction)
         toolbar.addAction(self.saveAction)
-        toolbar.addAction(self.clearImageAction)
+        toolbar.addAction(self.clearAllAnnotationsItemAction)
         toolbar.addAction(self.selectAllItemsAction)
-        toolbar.addAction(self.deleteSelectionAction)
+        #toolbar.addAction(self.deleteSelectionAction)
         toolbar.addWidget(self.fontFamilyComboBox)
         toolbar.addWidget(self.fontSizeComboBox)
         toolbar.addWidget(self.colorButton)
-        toolbar.addAction(self.fitToContentAction)
         toolbar.addWidget(self.zoomComboBox)
 
     def initAnnotationsDock(self):
@@ -227,13 +219,13 @@ class MainWindow(QtGui.QMainWindow):
 
         self.annotationsList = QtGui.QListWidget(container)
 
-        deleteSelectionAction = QtGui.QAction('delete', self.annotationsList)
+        deleteSelectionAction = QtGui.QAction('Delete', self.annotationsList)
         deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
         deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         deleteSelectionAction.triggered.connect(self.onTextListWidgetDeleteSelectionAction)
         self.annotationsList.addAction(deleteSelectionAction)
 
-        addTextAction = QtGui.QAction('add', self.annotationsList)
+        addTextAction = QtGui.QAction('Add', self.annotationsList)
         addTextAction.setShortcut('+')
         addTextAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         addTextAction.triggered.connect(self.onTextListWidgetAddAction)
@@ -251,19 +243,18 @@ class MainWindow(QtGui.QMainWindow):
 
     def onTextListWidgetAddAction(self):
         newText = self.getUniqueNewAnnotationText('new')
-        self.userAnnotations.append(newText)
+        self.userPredefinedAnnotations.append(newText)
         self.updateAnnotationsTextList()
 
     def onTextListWidgetDeleteSelectionAction(self):
-        print 'onTextListWidgetDeleteSelectionAction'
         for selectedItem in self.annotationsList.selectedItems():
-            self.userAnnotations.remove(selectedItem.text())
+            self.userPredefinedAnnotations.remove(selectedItem.text())
         self.updateAnnotationsTextList()
 
     def getUniqueNewAnnotationText(self, text):
         newText = text
         counter = 1
-        while newText in self.userAnnotations:
+        while newText in self.userPredefinedAnnotations:
             newText = '%s%d' % (text, counter)
             counter += 1
 
@@ -271,39 +262,46 @@ class MainWindow(QtGui.QMainWindow):
 
     def onAddNewTextButton(self):
         newText = self.getUniqueNewAnnotationText('new')
-        self.userAnnotations.append(newText)
+        self.userPredefinedAnnotations.append(newText)
         self.updateAnnotationsTextList()
+        self.updateAddAnnotationItemActionSubMenu()
 
     def onTextListItemChanged(self, item):
         modelIndex = self.annotationsList.indexFromItem(item)
         index = modelIndex.row()
         newText = item.text()
-        if newText not in self.userAnnotations:
-            self.userAnnotations[index] = newText
+        if newText not in self.userPredefinedAnnotations:
+            self.userPredefinedAnnotations[index] = newText
         self.updateAnnotationsTextList()
+        self.updateAddAnnotationItemActionSubMenu()
 
     def updateAnnotationsTextList(self):
         self.annotationsList.clear()
-        for text_choice in self.userAnnotations:
+        for text_choice in self.userPredefinedAnnotations:
             item = QtGui.QListWidgetItem(text_choice)
             item.setFlags (item.flags() | QtCore.Qt.ItemIsEditable)
             self.annotationsList.addItem(item)
 
     def onLoadBackgroundImageAction(self):
+        openFilename, ext = QtGui.QFileDialog.getOpenFileName(self, 'Load image', '', MainWindow.getReadImageFormatWildcards(), '*.jpg')
+        if not openFilename: #user canceled
+            return
+
         if(self.backgroundImageItem):
             self.scene.removeItem(self.backgroundImageItem)
+            self.backgroundImageItem = None
 
-        openFilename, ext = QtGui.QFileDialog.getOpenFileName(self, 'Load image', '', MainWindow.getReadImageFormatWildcards(), '*.png')
         image =  QtGui.QImage(openFilename)
         pixmap = QtGui.QPixmap(image)
 
+        assert self.backgroundImageItem is None
         self.backgroundImageItem = QtGui.QGraphicsPixmapItem(pixmap)
         self.backgroundImageItem.setZValue(-100)
         self.scene.addItem(self.backgroundImageItem)
 
 
-    def addAnnotationTextItem(self, text):
-        mousePos = self.view.mapFromGlobal(QtGui.QCursor.pos())
+    def addAnnotationTextItem(self, text, screenPos):
+        mousePos = self.view.mapFromGlobal(screenPos)
         scenePos = self.view.mapToScene(mousePos)
 
         textItem = TextItem()
@@ -317,29 +315,26 @@ class MainWindow(QtGui.QMainWindow):
         self.scene.addItem(textItem)
 
     def onAddTextItemAction(self):
-        self.addAnnotationTextItem('default text')
+        self.addAnnotationTextItem('default text', QtGui.QCursor.pos())
 
-    def onPredifinedAnnotationMenuItem(self, annotation):
-        print annotation
-        self.addAnnotationTextItem(annotation)
+    def onPredefinedAnnotationMenuItem(self, annotation):
+        self.addAnnotationTextItem(annotation, QtGui.QCursor.pos())
 
-    def getPredifinedAnnotationsMenu(self):
-        menu = QtGui.QMenu('SUB MENU')
-        for annotation in self.userAnnotations:
+    def updateAddAnnotationItemActionSubMenu(self):
+        menu = self.getPredefinedAnnotationsMenu()
+        self.addAnnotationItemAction.setMenu(menu)
+
+    def getPredefinedAnnotationsMenu(self):
+        menu = QtGui.QMenu()
+        index = 1
+        for annotation in self.userPredefinedAnnotations:
             action = QtGui.QAction(annotation, menu)
-            action.triggered.connect(lambda arg=annotation: self.onPredifinedAnnotationMenuItem(arg))
+            if index < 10:
+                action.setShortcut('Ctrl+%d'% index)
+            action.triggered.connect(lambda arg1=annotation: self.onPredefinedAnnotationMenuItem(arg1))
             menu.addAction(action)
+            index += 1
         return menu
-
-    def onGraphicViewGetContextualMenu(self, event):
-        subMenu = self.getPredifinedAnnotationsMenu()
-        self.addTextItemAction.setMenu(subMenu)
-
-        menu = QtGui.QMenu(self)
-        menu.addAction(self.loadBackgroundImageAction)
-        menu.addAction(self.addTextItemAction)
-        menu.exec_(event.globalPos())
-
 
     def onDeleteSelectionAction(self):
         selectedItems = self.scene.selectedItems()
@@ -347,10 +342,10 @@ class MainWindow(QtGui.QMainWindow):
             self.scene.removeItem(selectedItem)
 
     def onSceneSelectionChanged(self):
-        self.updateUIWithSelectionValues()
+        self.updateColorAndFontWithSelectionValues()
 
 
-    def updateUIWithSelectionValues(self):
+    def updateColorAndFontWithSelectionValues(self):
         #update UI based on the first item selected
         selectedItems = self.scene.selectedItems()
         numItem = len(selectedItems)
@@ -381,81 +376,71 @@ class MainWindow(QtGui.QMainWindow):
         self.colorDialog.open()
 
 
-    def getContentRect(self):
-        totalRect = None
-        items = None
-
-        if(self.scene.selectedItems()):
-            items = self.scene.selectedItems()
-        else:
-            items = self.scene.items()
-
-        for item in items:
-            itemRect = item.boundingRect()
-            if totalRect == None:
-                totalRect = itemRect
-            else:
-                totalRect = itemRect.united(totalRect)
-
-    def fitToContent(self):
-        contentRect = self.getContentRect()
-        if(contentRect):
-            self.view.fitInView(contentRect)
-
-
-
     @staticmethod
-    def getImageFormatWildcards(formats):
+    def getImageFormatWildcards(imageFormats, splittedValue):
         #'Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)'
-        formatsWildcards = 'Images ('
-        for format in formats:
-            formatsWildcards += ('*.%s ') % format
 
-        formatsWildcards +=');;'
+        if splittedValue:
+            formatsWildcards = ''
+            for imageFormat in imageFormats:
+                formatsWildcards += ('*.%s;;') % imageFormat
+        else:
+            formatsWildcards = 'Images ('
+            for imageFormat in imageFormats:
+                formatsWildcards += ('*.%s ') % imageFormat
+
+            formatsWildcards +=');;'
 
         return formatsWildcards
 
     @staticmethod
     def getSaveImageFormatWildcards():
         formats = QtGui.QImageWriter.supportedImageFormats()
-        return MainWindow.getImageFormatWildcards(formats)
+        return MainWindow.getImageFormatWildcards(formats, True)
 
     @staticmethod
     def getReadImageFormatWildcards():
         formats = QtGui.QImageReader.supportedImageFormats()
-        return MainWindow.getImageFormatWildcards(formats)
+        return MainWindow.getImageFormatWildcards(formats, False)
 
     def onExitAction(self):
         self.close()
 
 
     def onSaveImageAction(self):
+        if not self.backgroundImageItem:
+            self.statusBar().showMessage('no background image')
+            return
+
         imageFormats = QtGui.QImageWriter.supportedImageFormats()
         formatsWildcards = ''
         for imageFormat in imageFormats:
             formatsWildcards += '*.%s;;' % imageFormat
 
+        saveFilename, ext = QtGui.QFileDialog.getSaveFileName(self, 'Save file', self.lastSaveFolder, MainWindow.getSaveImageFormatWildcards(), '*.jpg')
+        if not saveFilename: # user canceled dialog
+            return
 
-        saveFilename, ext = QtGui.QFileDialog.getSaveFileName(self, 'Save file', self.lastSaveFolder, MainWindow.getSaveImageFormatWildcards(), '*.png')
+
         self.lastSaveFolder = saveFilename
-        print saveFilename
-        #items = self.scene.get_target_items()
-        totalRect = QtCore.QRect(0, 0, 800, 400)
 
-        #QtGui.QGraphicsPixmapItem.()
-        if self.backgroundImageItem:
-            totalRect = self.backgroundImageItem.sceneBoundingRect()
+        saveRect = self.backgroundImageItem.sceneBoundingRect()
 
-        savedPixmap = QtGui.QPixmap(totalRect.width(), totalRect.height())
+        savedPixmap = QtGui.QPixmap(saveRect.width(), saveRect.height())
         savedPixmapPainter = QtGui.QPainter(savedPixmap)
         self.scene.clearSelection() #clear selection so we don't render selection boxes
-        self.scene.render(savedPixmapPainter, totalRect, totalRect)
+        self.scene.render(savedPixmapPainter, saveRect, saveRect)
         cleanedExt = ext
         savedPixmap.save(saveFilename, cleanedExt)
         savedPixmapPainter.end()
 
-    def onClearImageAction(self):
-        print 'clear'
+        self.statusBar().showMessage('image saved to "%s"' % saveFilename)
+
+    def onClearAllAnnotationsItemsAction(self):
+        items = self.scene.items()
+        for item in items:
+            if(item is not self.backgroundImageItem):
+                self.scene.removeItem(item)
 
     def closeEvent(self, event):
         self.scene.selectionChanged.disconnect()
@@ -464,7 +449,8 @@ class MainWindow(QtGui.QMainWindow):
         self.view = None
         self.colorDialog.close()
         self.saveSettings()
-        QtGui.QMainWindow.closeEvent(self, event)
+
+        super(MainWindow,self).closeEvent(event)
 
 
     def onColorDialogFinished(self):
@@ -482,7 +468,7 @@ class MainWindow(QtGui.QMainWindow):
                 item.setDefaultTextColor(self.userColor)
                 item.setFont(self.userFont)
 
-    def onFontComboBoxchanged(self):
+    def onFontComboBoxChanged(self):
         self.userFont.setFamily(self.fontFamilyComboBox.currentFont().family())
         self.updateSelectionColorAndFont()
 
@@ -510,7 +496,7 @@ class MainWindow(QtGui.QMainWindow):
         settings.setValue('font', self.userFont.toString())
         settings.setValue('colorDialogPosition', self.colorDialogPosition)
         settings.setValue('lastSaveFolder', self.lastSaveFolder)
-        settings.setValue('userAnnotations', self.userAnnotations)
+        settings.setValue('userPredefinedAnnotations', self.userPredefinedAnnotations)
 
 
     def readSettings(self):
@@ -524,11 +510,12 @@ class MainWindow(QtGui.QMainWindow):
         self.colorDialogPosition = settings.value('colorDialogPosition', self.colorDialogPosition)
         self.lastSaveFolder = settings.value('lastSaveFolder', self.lastSaveFolder)
 
-        self.userAnnotations = settings.value('userAnnotations', self.userAnnotations)
+        self.userPredefinedAnnotations = settings.value('userPredefinedAnnotations', self.userPredefinedAnnotations)
 
         self.updateColorDialogAndColorButton()
         self.updateFontFamilyComboBoxAndSizeComboBox()
         self.updateAnnotationsTextList()
+        self.updateAddAnnotationItemActionSubMenu()
 
     def updateFontFamilyComboBoxAndSizeComboBox(self):
         self.fontFamilyComboBox.setCurrentFont(self.userFont)
@@ -551,10 +538,9 @@ class MainWindow(QtGui.QMainWindow):
         self.zoomComboBox.setCurrentIndex(index)
 
 def main():
-    
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName('winFlo32')
-    app.setApplicationName('winFlo32')
+    app.setApplicationVersion('1.0')
     mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
