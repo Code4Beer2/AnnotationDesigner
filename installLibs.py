@@ -1,13 +1,6 @@
 import urllib
 import os
-import subprocess
-import sys
 
-pythonPath  = os.path.split(sys.executable)[0]
-print pythonPath
-
-#if sys.path
-#sys.path.append(pythonPath)
 
 if not os.path.isdir('tmp'):
     os.mkdir('tmp')
