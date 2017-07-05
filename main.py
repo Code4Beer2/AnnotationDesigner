@@ -58,6 +58,7 @@ class ListWidget(QtGui.QListWidget):
 
     #def
 
+#icon found at http://docs.wxwidgets.org/trunk/page_stockitems.html
 class MainWindow(QtGui.QMainWindow):
     
     def __init__(self):
@@ -221,7 +222,8 @@ class MainWindow(QtGui.QMainWindow):
         container.setLayout(containerLayout);
 
         addNewTextButton = QtGui.QPushButton(container)
-        addNewTextButton.setText('add')
+        addNewTextButton.setText('Add')
+        addNewTextButton.setIcon(QtGui.QIcon('ico/add.png'))
         addNewTextButton.clicked.connect(self.onAddNewTextButton)
         containerLayout.addWidget(addNewTextButton)
 
