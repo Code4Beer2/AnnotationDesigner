@@ -3,7 +3,7 @@ from cx_Freeze import setup, Executable
 # dependencies
 build_exe_options = {
     "packages": ["os", "sys", "glob", "re", "atexit", "PySide.QtCore", "PySide.QtGui", "PySide.QtXml"],
-    #"include_files": [("main.py")], # this isn't necessary after all
+    "include_files": ["ico"], # this isn't necessary after all
     "excludes": ["Tkinter", "Tkconstants", "tcl"],
     "build_exe": "build"#,
     #"icon": "./example/Resources/Icons/monitor.ico"
@@ -24,5 +24,5 @@ setup(
     author="Laurent",
     options={"build_exe": build_exe_options},
     executables=executable,
-    requires=['PySide', 'cx_Freeze', 'simplejson']
+    requires=['PySide', 'cx_Freeze']
 )

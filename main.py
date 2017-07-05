@@ -88,31 +88,38 @@ class MainWindow(QtGui.QMainWindow):
         self.selectAllItemsAction = QtGui.QAction('Select all', self)
         self.selectAllItemsAction.setShortcut('Ctrl+A')
         self.selectAllItemsAction.setStatusTip('Select all annoations')
+        self.selectAllItemsAction.setIcon(QtGui.QIcon('ico/selectAll.png'))
         self.selectAllItemsAction.triggered.connect(self.onSelectAllItemAction)
 
         self.addAnnotationItemAction = QtGui.QAction('Add annotation', self)
         #self.addTextItemAction.setShortcut('Ctrl+L')
+        self.addAnnotationItemAction.setIcon(QtGui.QIcon('ico/add.png'))
         self.addAnnotationItemAction.setStatusTip('Add annotation at mouse position')
         self.addAnnotationItemAction.triggered.connect(self.onAddTextItemAction)
 
         self.loadBackgroundImageAction = QtGui.QAction('Load background image', self)
         self.loadBackgroundImageAction.setShortcut('Ctrl+L')
         self.loadBackgroundImageAction.setStatusTip('Load background image')
+        self.loadBackgroundImageAction.setIcon(QtGui.QIcon('ico/open.png'))
         self.loadBackgroundImageAction.triggered.connect(self.onLoadBackgroundImageAction)
 
         self.clearAllAnnotationsItemAction = QtGui.QAction('Clear all', self)
         self.clearAllAnnotationsItemAction.setShortcut('Ctrl+L')
+        self.clearAllAnnotationsItemAction.setIcon(QtGui.QIcon('ico/clear.png'))
         self.clearAllAnnotationsItemAction.setStatusTip('Exit application')
         self.clearAllAnnotationsItemAction.triggered.connect(self.onClearAllAnnotationsItemsAction)
+
 
         self.exitAction = QtGui.QAction('Exit', self)
         self.exitAction.setShortcut('Ctrl+Q')
         self.exitAction.setStatusTip('Exit application')
+        self.exitAction.setIcon(QtGui.QIcon('ico/quit.png'))
         self.exitAction.triggered.connect(self.onExitAction)
 
         self.saveAction = QtGui.QAction('Save', self)
         self.saveAction.setShortcut('Ctrl+S')
         self.saveAction.setStatusTip('Save picture')
+        self.saveAction.setIcon(QtGui.QIcon('ico/save.png'))
         self.saveAction.triggered.connect(self.onSaveImageAction)
 
 
@@ -151,6 +158,7 @@ class MainWindow(QtGui.QMainWindow):
         deleteSelectionAction = QtGui.QAction('Delete', self.view)
         deleteSelectionAction.setStatusTip('Delete selection')
         deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
+        deleteSelectionAction.setIcon(QtGui.QIcon('ico/delete.png'))
         deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         deleteSelectionAction.triggered.connect(self.onDeleteSelectionAction)
 
@@ -221,12 +229,14 @@ class MainWindow(QtGui.QMainWindow):
 
         deleteSelectionAction = QtGui.QAction('Delete', self.annotationsList)
         deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
+        deleteSelectionAction.setIcon(QtGui.QIcon('ico/delete.png'))
         deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         deleteSelectionAction.triggered.connect(self.onTextListWidgetDeleteSelectionAction)
         self.annotationsList.addAction(deleteSelectionAction)
 
         addTextAction = QtGui.QAction('Add', self.annotationsList)
         addTextAction.setShortcut('+')
+        addTextAction.setIcon(QtGui.QIcon('ico/add.png'))
         addTextAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         addTextAction.triggered.connect(self.onTextListWidgetAddAction)
         self.annotationsList.addAction(addTextAction)
