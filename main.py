@@ -74,7 +74,7 @@ class ListWidget(QtGui.QListWidget):
 class MainWindow(QtGui.QMainWindow):
     scene = None
     view = None
-    textList = None
+    annotationsList = None
     
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -217,8 +217,9 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle('WinFlo32.exe')
 
     def initTextListDock(self):
-        textListDock = QtGui.QDockWidget("Text choices")
-        textListDock.setObjectName("text_list_dock")
+        annotationsDock = QtGui.QDockWidget("Annomations")
+        annotationsDock.setObjectName("annotationsDock")
+        annotationsDock.setFeatures(0)
         container = QtGui.QWidget()
         containerLayout = QtGui.QVBoxLayout()
         container.setLayout(containerLayout);
@@ -229,28 +230,28 @@ class MainWindow(QtGui.QMainWindow):
         containerLayout.addWidget(addNewTextButton)
 
 
-        self.textList = QtGui.QListWidget(container)
+        self.annotationsList = QtGui.QListWidget(container)
 
-        deleteSelectionAction = QtGui.QAction("delete", self.textList)
+        deleteSelectionAction = QtGui.QAction("delete", self.annotationsList)
         deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
         deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         deleteSelectionAction.triggered.connect(self.onTextListWidgetDeleteSelectionAction)
-        self.textList.addAction(deleteSelectionAction)
+        self.annotationsList.addAction(deleteSelectionAction)
 
-        addTextAction = QtGui.QAction("add", self.textList)
+        addTextAction = QtGui.QAction("add", self.annotationsList)
         addTextAction.setShortcut("+")
         addTextAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         addTextAction.triggered.connect(self.onTextListWidgetAddAction)
-        self.textList.addAction(addTextAction)
+        self.annotationsList.addAction(addTextAction)
 
 
-        self.textList.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-        self.textList.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-        containerLayout.addWidget(self.textList)
-        self.textList.itemChanged.connect(self.onTextListItemChanged)
+        self.annotationsList.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        self.annotationsList.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        containerLayout.addWidget(self.annotationsList)
+        self.annotationsList.itemChanged.connect(self.onTextListItemChanged)
 
-        textListDock.setWidget(container)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, textListDock)
+        annotationsDock.setWidget(container)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, annotationsDock)
 
         self.updatePredifinedTextList()
 
@@ -261,7 +262,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def onTextListWidgetDeleteSelectionAction(self):
         print "onTextListWidgetDeleteSelectionAction"
-        for selectedItem in self.textList.selectedItems():
+        for selectedItem in self.annotationsList.selectedItems():
             self.userPredifinedTexts.remove(selectedItem.text())
         self.updatePredifinedTextList()
 
@@ -270,7 +271,7 @@ class MainWindow(QtGui.QMainWindow):
         counter = 1
         while newText in self.userPredifinedTexts:
             newText = '%s%d' % (text, counter)
-            counter+=1
+            counter += 1
 
         return newText
 
@@ -281,7 +282,7 @@ class MainWindow(QtGui.QMainWindow):
         self.updatePredifinedTextList()
 
     def onTextListItemChanged(self, item):
-        modelIndex = self.textList.indexFromItem(item)
+        modelIndex = self.annotationsList.indexFromItem(item)
         index = modelIndex.row()
         newText = item.text()
         if newText not in self.userPredifinedTexts:
@@ -289,11 +290,11 @@ class MainWindow(QtGui.QMainWindow):
         self.updatePredifinedTextList()
 
     def updatePredifinedTextList(self):
-        self.textList.clear()
+        self.annotationsList.clear()
         for text_choice in self.userPredifinedTexts:
             item = QtGui.QListWidgetItem(text_choice)
             item.setFlags (item.flags() | QtCore.Qt.ItemIsEditable)
-            self.textList.addItem(item)
+            self.annotationsList.addItem(item)
 
     def onLoadBackgroundImageAction(self):
 
@@ -311,14 +312,11 @@ class MainWindow(QtGui.QMainWindow):
 
     def addTextItem(self, text):
         textItem = TextItem()
-        textItemFont = QtGui.QFont("Times", 10, QtGui.QFont.Bold)
-
         textItem.setPlainText(text)
         textItem.setFont(self.userFont)
         textItem.setDefaultTextColor(self.userColor)
         textItem.setFlag(QtGui.QGraphicsTextItem.ItemIsMovable)
         textItem.setFlag(QtGui.QGraphicsTextItem.ItemIsSelectable)
-        #textItem.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
 
         mousePos = self.view.mapFromGlobal(QtGui.QCursor.pos())
         scenePos = self.view.mapToScene(mousePos)
