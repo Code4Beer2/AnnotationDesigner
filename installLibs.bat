@@ -1,0 +1,2 @@
+python installLibs.py
+pause
