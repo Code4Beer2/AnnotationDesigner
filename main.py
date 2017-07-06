@@ -61,11 +61,26 @@ class ListWidget(QtGui.QListWidget):
 class GraphicsView(QtGui.QGraphicsView):
 
     imageDropCallback = None
+    imageWheelZoomCallback = None
 
     def __init__(self, scene):
         super(GraphicsView, self).__init__(scene)
 
         self.setAcceptDrops(True)
+
+
+    def wheelEvent(self, event):
+        """
+        :param event: QtGui.QWheelEvent
+        :return: None
+        """
+        key_mod = QtGui.QApplication.keyboardModifiers()
+        if key_mod & QtCore.Qt.CTRL:
+            if self.imageWheelZoomCallback:
+                self.imageWheelZoomCallback(event.delta())
+            event.accept()
+
+        super(GraphicsView, self).wheelEvent(event)
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls():
@@ -86,10 +101,10 @@ class GraphicsView(QtGui.QGraphicsView):
             e.accept()
 
             firstUrl =  e.mimeData().urls()[0]
-            fname = str(firstUrl.toLocalFile())
+            firstLocalFilePath = str(firstUrl.toLocalFile())
 
             if self.imageDropCallback:
-                self.imageDropCallback(fname)
+                self.imageDropCallback(firstLocalFilePath)
         else:
             e.ignore()
 
@@ -101,8 +116,10 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
+        self.zoomValues = [10, 20, 50, 100, 120, 150, 200, 300, 400]
+
         #default values
-        self.userZoom = 100
+        self.userZoomIndex = self.zoomValues.index(100)
         self.userColor = QtGui.QColor(255, 0, 0, 255)
         self.userFont = QtGui.QFont()
         self.mainWindowRect = QtCore.QRect(300, 300, 400, 600)
@@ -187,6 +204,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.view = GraphicsView(self.scene)
         self.view.imageDropCallback = self.onViewImageDrop
+        self.view.imageWheelZoomCallback = self.onViewImageScrollZoom
         #self.view.setRubberBandSelectionMode()
         self.view.setInteractive(True)
         #self.view.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
@@ -235,7 +253,6 @@ class MainWindow(QtGui.QMainWindow):
         self.updateColorDialogAndColorButton()
 
         self.zoomComboBox = QtGui.QComboBox()
-        self.zoomValues = [10, 20, 50, 100, 120, 150, 200]
         for zoomValue in self.zoomValues:
             self.zoomComboBox.addItem('%d%%' % zoomValue)
         self.zoomComboBox.activated.connect(self.onZoomComboBoxChanged)
@@ -249,6 +266,7 @@ class MainWindow(QtGui.QMainWindow):
         toolbar.addAction(self.clearAllAnnotationsItemAction)
         toolbar.addAction(self.selectAllItemsAction)
         #toolbar.addAction(self.deleteSelectionAction)
+        toolbar.addSeparator()
         toolbar.addWidget(self.fontFamilyComboBox)
         toolbar.addWidget(self.fontSizeComboBox)
         toolbar.addWidget(self.colorButton)
@@ -294,6 +312,15 @@ class MainWindow(QtGui.QMainWindow):
 
         self.updateAnnotationsTextList()
 
+
+    def onViewImageScrollZoom(self, wheelDelta):
+        if wheelDelta>0:
+            self.userZoomIndex = min(self.userZoomIndex + 1, len(self.zoomValues)-1)
+        else:
+            self.userZoomIndex = max(self.userZoomIndex - 1, 0)
+
+        self.updateViewScale()
+        self.updateZoomComboBox()
 
     def onViewImageDrop(self, imagePath):
         self.loadBackgroundImage(imagePath)
@@ -473,11 +500,6 @@ class MainWindow(QtGui.QMainWindow):
             self.statusBar().showMessage('no background image')
             return
 
-        imageFormats = QtGui.QImageWriter.supportedImageFormats()
-        formatsWildcards = ''
-        for imageFormat in imageFormats:
-            formatsWildcards += '*.%s;;' % imageFormat
-
         saveFilename, ext = QtGui.QFileDialog.getSaveFileName(self, 'Save file', self.lastSaveFolder, MainWindow.getSaveImageFormatWildcards(), '*.jpg')
         if not saveFilename: # user canceled dialog
             return
@@ -533,12 +555,17 @@ class MainWindow(QtGui.QMainWindow):
         self.userFont.setFamily(self.fontFamilyComboBox.currentFont().family())
         self.updateSelectionColorAndFont()
 
-    def onZoomComboBoxChanged(self):
-        zoomPercent = self.zoomValues[self.zoomComboBox.currentIndex()]
+
+    def updateViewScale(self):
+        zoomPercent = self.zoomValues[self.userZoomIndex]
         zoomNormalized = zoomPercent / 100.0
         transform = QtGui.QTransform()
         transform.scale(zoomNormalized, zoomNormalized)
         self.view.setTransform(transform)
+
+    def onZoomComboBoxChanged(self):
+        self.userZoomIndex = self.zoomComboBox.currentIndex()
+        self.updateViewScale()
 
     def onFontSizeComboBoxChanged(self):
         pointSize = int(self.fontSizeComboBox.currentText())
@@ -595,8 +622,7 @@ class MainWindow(QtGui.QMainWindow):
         self.colorDialog.setCurrentColor(self.userColor)
 
     def updateZoomComboBox(self):
-        index = self.zoomValues.index(self.userZoom)
-        self.zoomComboBox.setCurrentIndex(index)
+        self.zoomComboBox.setCurrentIndex(self.userZoomIndex)
 
 def main():
     app = QtGui.QApplication(sys.argv)
