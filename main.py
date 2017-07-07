@@ -1,5 +1,7 @@
 import os
 import sys
+import platform
+import PySide
 from PySide import QtGui
 from PySide import QtCore
 
@@ -92,7 +94,7 @@ class GraphicsView(QtGui.QGraphicsView):
         :param event: QtGui.QWheelEvent
         :return: None
         """
-        key_mod = QtGui.QApplication.keyboardModifiers()
+        key_mod = event.modifiers()
         if key_mod & QtCore.Qt.CTRL:
             if self.imageWheelZoomCallback:
                 self.imageWheelZoomCallback(event.delta())
@@ -175,6 +177,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.setAcceptDrops(True)
 
+        self.showAboutAction = QtGui.QAction('About', self)
+        self.showAboutAction.setMenuRole(QtGui.QAction.AboutRole)
+        self.showAboutAction.setStatusTip('About the app')
+        self.showAboutAction.setIcon(QtGui.QIcon(getAbsPath('ico/about.png')))
+        self.showAboutAction.triggered.connect(self.onAboutAction)
+
         self.selectAllItemsAction = QtGui.QAction('Select all', self)
         self.selectAllItemsAction.setShortcut('Ctrl+A')
         self.selectAllItemsAction.setStatusTip('Select all annoations')
@@ -228,7 +236,7 @@ class MainWindow(QtGui.QMainWindow):
         self.initMenuBar()
 
         self.setGeometry(300, 300, 640, 480)
-        self.setWindowTitle('WinFlo32.exe')
+        self.setWindowTitle(QtGui.qApp.applicationName())
 
     def initSceneAndView(self):
         self.scene = QtGui.QGraphicsScene()
@@ -271,6 +279,9 @@ class MainWindow(QtGui.QMainWindow):
         fileMenu.addAction(self.saveAction)
         fileMenu.addSeparator()
         fileMenu.addAction(self.exitAction)
+
+        helpMenu = mainMenuBar.addMenu('&Help')
+        helpMenu.addAction(self.showAboutAction)
 
     def initToolBar(self):
         self.fontFamilyComboBox = QtGui.QFontComboBox()
@@ -346,6 +357,15 @@ class MainWindow(QtGui.QMainWindow):
 
         self.updateAnnotationsTextList()
 
+
+    def onAboutAction(self):
+         '''Popup a box with about message.'''
+         aboutTitle = 'about "%s"' % QtGui.qApp.applicationName()
+         aboutText = 'Made by "%s"\nplatform "%s" python "%s" pyside "%s"' % (QtGui.qApp.organizationName(),
+                                                                              platform.system(),
+                                                                              platform.python_version(),
+                                                                              PySide.__version__)
+         QtGui.QMessageBox.about(self, aboutTitle, aboutText)
 
     def onViewImageScrollZoom(self, wheelDelta):
         if wheelDelta>0:
@@ -619,14 +639,14 @@ class MainWindow(QtGui.QMainWindow):
 
     @staticmethod
     def getSettings():
-        return QtCore.QSettings('FlorentinCorp', 'WinFlo32')
+        return QtCore.QSettings(QtGui.qApp.organizationName(), QtGui.qApp.applicationName())
 
     def saveSettings(self):
         settings = MainWindow.getSettings()
         settings.setValue('geometry', self.saveGeometry())
         settings.setValue('windowState', self.saveState())
-        settings.setValue('color', self.userColor)
-        settings.setValue('font', self.userFont.toString())
+        settings.setValue('userColor', self.userColor)
+        settings.setValue('userFont', self.userFont.toString())
         settings.setValue('colorDialogPosition', self.colorDialogPosition)
         settings.setValue('lastSaveFolder', self.lastSaveFolder)
         settings.setValue('userPredefinedAnnotations', self.userPredefinedAnnotations)
@@ -636,8 +656,8 @@ class MainWindow(QtGui.QMainWindow):
         settings = MainWindow.getSettings()
         self.restoreGeometry(settings.value('geometry'))
         self.restoreState(settings.value('windowState'))
-        self.userColor = settings.value('color', self.userColor)
-        fontString = settings.value('font', '')
+        self.userColor = settings.value('userColor', self.userColor)
+        fontString = settings.value('userFont', '')
         if(isinstance(fontString, basestring)):
             self.userFont.fromString(fontString)
         self.colorDialogPosition = settings.value('colorDialogPosition', self.colorDialogPosition)
@@ -671,7 +691,8 @@ class MainWindow(QtGui.QMainWindow):
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    app.setApplicationName('Annotations')
+    app.setOrganizationName('Laurent')
+    app.setApplicationName('AnnotationDesigner')
     app.setApplicationVersion('1.0')
     mainWindow = MainWindow()
     mainWindow.show()
