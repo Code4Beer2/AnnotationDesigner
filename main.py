@@ -481,6 +481,8 @@ class MainWindow(QtGui.QMainWindow):
 
         return formatsWildcards
 
+
+
     @staticmethod
     def getSaveImageFormatWildcards():
         formats = QtGui.QImageWriter.supportedImageFormats()
@@ -534,7 +536,6 @@ class MainWindow(QtGui.QMainWindow):
         self.saveSettings()
 
         super(MainWindow,self).closeEvent(event)
-
 
     def onColorDialogFinished(self):
         self.colorDialogPosition = self.colorDialog.pos()
@@ -626,7 +627,7 @@ class MainWindow(QtGui.QMainWindow):
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    app.setApplicationName('winFlo32')
+    app.setApplicationName('Annotations')
     app.setApplicationVersion('1.0')
     mainWindow = MainWindow()
     mainWindow.show()
