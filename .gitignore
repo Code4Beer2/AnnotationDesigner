@@ -1,7 +1,9 @@
 #folder we don't want
 build
+dist
 .idea
 tmp
+
 
 # Windows image file caches
 Thumbs.db

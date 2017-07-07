@@ -1,2 +1,2 @@
-python setup.py build
+python -m PyInstaller main.spec
 pause
