@@ -177,6 +177,18 @@ class MainWindow(QtGui.QMainWindow):
 
         self.setAcceptDrops(True)
 
+        self.zoomInAction = QtGui.QAction('ZoomIn', self)
+        self.zoomInAction.setStatusTip('Zoom in')
+        self.zoomInAction.setShortcut(QtGui.QKeySequence.ZoomIn)
+        self.zoomInAction.setIcon(QtGui.QIcon(getAbsPath('ico/zoomIn.png')))
+        self.zoomInAction.triggered.connect(self.onZoomInAction)
+        
+        self.zoomOutAction = QtGui.QAction('ZoomOut', self)
+        self.zoomOutAction.setStatusTip('Zoom out')
+        self.zoomOutAction.setShortcut(QtGui.QKeySequence.ZoomOut)
+        self.zoomOutAction.setIcon(QtGui.QIcon(getAbsPath('ico/zoomOut.png')))
+        self.zoomOutAction.triggered.connect(self.onZoomOutAction)
+
         self.showAboutAction = QtGui.QAction('About', self)
         self.showAboutAction.setMenuRole(QtGui.QAction.AboutRole)
         self.showAboutAction.setStatusTip('About the app')
@@ -184,7 +196,7 @@ class MainWindow(QtGui.QMainWindow):
         self.showAboutAction.triggered.connect(self.onAboutAction)
 
         self.selectAllItemsAction = QtGui.QAction('Select all', self)
-        self.selectAllItemsAction.setShortcut('Ctrl+A')
+        self.selectAllItemsAction.setShortcut(QtGui.QKeySequence.SelectAll)
         self.selectAllItemsAction.setStatusTip('Select all annoations')
         self.selectAllItemsAction.setIcon(QtGui.QIcon(getAbsPath('ico/selectAll.png')))
         self.selectAllItemsAction.triggered.connect(self.onSelectAllItemAction)
@@ -209,13 +221,13 @@ class MainWindow(QtGui.QMainWindow):
 
 
         self.exitAction = QtGui.QAction('Exit', self)
-        self.exitAction.setShortcut('Ctrl+Q')
+        self.exitAction.setShortcut(QtGui.QKeySequence.Quit)
         self.exitAction.setStatusTip('Exit application')
         self.exitAction.setIcon(QtGui.QIcon(getAbsPath('ico/quit.png')))
         self.exitAction.triggered.connect(self.onExitAction)
 
         self.saveAction = QtGui.QAction('Save', self)
-        self.saveAction.setShortcut('Ctrl+S')
+        self.saveAction.setShortcut(QtGui.QKeySequence.Save)
         self.saveAction.setStatusTip('Save picture')
         self.saveAction.setIcon(QtGui.QIcon(getAbsPath('ico/save.png')))
         self.saveAction.triggered.connect(self.onSaveImageAction)
@@ -316,6 +328,8 @@ class MainWindow(QtGui.QMainWindow):
         toolbar.addWidget(self.fontSizeComboBox)
         toolbar.addWidget(self.colorButton)
         toolbar.addWidget(self.zoomComboBox)
+        toolbar.addAction(self.zoomInAction)
+        toolbar.addAction(self.zoomOutAction)
 
     def initAnnotationsDock(self):
         annotationsDock = QtGui.QDockWidget('Annotations')
@@ -358,23 +372,43 @@ class MainWindow(QtGui.QMainWindow):
         self.updateAnnotationsTextList()
 
 
+
+    def onZoomInAction(self):
+        self.zoomIn()
+
+    def onZoomOutAction(self):
+        self.zoomOut()
+
     def onAboutAction(self):
-         '''Popup a box with about message.'''
-         aboutTitle = 'about "%s"' % QtGui.qApp.applicationName()
-         aboutText = 'Made by "%s"\nplatform "%s" python "%s" pyside "%s"' % (QtGui.qApp.organizationName(),
-                                                                              platform.system(),
-                                                                              platform.python_version(),
-                                                                              PySide.__version__)
-         QtGui.QMessageBox.about(self, aboutTitle, aboutText)
+        '''Popup a box with about message.'''
+        aboutTitle = 'about "%s"' % QtGui.qApp.applicationName()
+        aboutText = 'Made by "%s"\nplatform "%s"\npython "%s"\npyside "%s"\nQt "%s"\n' % (QtGui.qApp.organizationName(),
+                                                                               platform.system(),
+                                                                               platform.python_version(),
+                                                                               PySide.__version_info__,
+                                                                               QtCore.__version_info__)
+
+
+        #aboutText += 'source code : <a href="https://github.com/Code4Beer2/Florentin">Trolltech</a>'
+
+        QtGui.QMessageBox.about(self, aboutTitle, aboutText)
+
+
+    def zoomIn(self):
+        self.userZoomIndex = min(self.userZoomIndex + 1, len(self.zoomValues)-1)
+        self.updateViewScale()
+        self.updateZoomComboBox()
+
+    def zoomOut(self):
+        self.userZoomIndex = max(self.userZoomIndex - 1, 0)
+        self.updateViewScale()
+        self.updateZoomComboBox()
 
     def onViewImageScrollZoom(self, wheelDelta):
         if wheelDelta>0:
-            self.userZoomIndex = min(self.userZoomIndex + 1, len(self.zoomValues)-1)
+            self.zoomIn()
         else:
-            self.userZoomIndex = max(self.userZoomIndex - 1, 0)
-
-        self.updateViewScale()
-        self.updateZoomComboBox()
+            self.zoomOut()
 
     def onViewTextDrop(self, text, viewPos):
         self.addAnnotationTextItem(text, viewPos)
