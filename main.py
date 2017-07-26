@@ -5,8 +5,8 @@ import PySide
 from PySide import QtGui
 from PySide import QtCore
 
-
-def getAbsPath(relative):
+# get resource path
+def getResPath(relative):
     if hasattr(sys, "_MEIPASS"): # if frozen with pyApplication
         return os.path.join(sys._MEIPASS, relative)
     return os.path.join(relative)
@@ -82,12 +82,19 @@ class GraphicsView(QtGui.QGraphicsView):
     imageDropCallback = None
     textDropCallback = None
     imageWheelZoomCallback = None
+    mouseRightClickCallback = None
 
     def __init__(self, scene):
         super(GraphicsView, self).__init__(scene)
 
         self.setAcceptDrops(True)
 
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == QtCore.Qt.RightButton:
+            if self.mouseRightClickCallback:
+                self.mouseRightClickCallback(event)
+        super(GraphicsView, self).mouseReleaseEvent(event)
 
     def wheelEvent(self, event):
         """
@@ -148,7 +155,7 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        self.setWindowIcon(QtGui.QIcon(getAbsPath('ico/app.ico')))
+        self.setWindowIcon(QtGui.QIcon(getResPath('ico/app.ico')))
 
         self.zoomValues = [10, 20, 50, 100, 120, 150, 200, 300, 400]
 
@@ -165,6 +172,8 @@ class MainWindow(QtGui.QMainWindow):
 
         self.backgroundImageItem = None
 
+        self.lastViewMouseRightClickPos = None
+
         self.userPredefinedAnnotations = list()
         for i in range(1,6):
             self.userPredefinedAnnotations.append('defaultText%d' % i)
@@ -173,6 +182,8 @@ class MainWindow(QtGui.QMainWindow):
         self.initUI()
         self.readSettings()
 
+        self.createDefaultBackgroundImage()
+
     def iniActions(self):
 
         self.setAcceptDrops(True)
@@ -180,42 +191,42 @@ class MainWindow(QtGui.QMainWindow):
         self.zoomInAction = QtGui.QAction('ZoomIn', self)
         self.zoomInAction.setStatusTip('Zoom in')
         self.zoomInAction.setShortcut(QtGui.QKeySequence.ZoomIn)
-        self.zoomInAction.setIcon(QtGui.QIcon(getAbsPath('ico/zoomIn.png')))
+        self.zoomInAction.setIcon(QtGui.QIcon(getResPath('ico/zoomIn.png')))
         self.zoomInAction.triggered.connect(self.onZoomInAction)
         
         self.zoomOutAction = QtGui.QAction('ZoomOut', self)
         self.zoomOutAction.setStatusTip('Zoom out')
         self.zoomOutAction.setShortcut(QtGui.QKeySequence.ZoomOut)
-        self.zoomOutAction.setIcon(QtGui.QIcon(getAbsPath('ico/zoomOut.png')))
+        self.zoomOutAction.setIcon(QtGui.QIcon(getResPath('ico/zoomOut.png')))
         self.zoomOutAction.triggered.connect(self.onZoomOutAction)
 
         self.showAboutAction = QtGui.QAction('About', self)
         self.showAboutAction.setMenuRole(QtGui.QAction.AboutRole)
         self.showAboutAction.setStatusTip('About the app')
-        self.showAboutAction.setIcon(QtGui.QIcon(getAbsPath('ico/about.png')))
+        self.showAboutAction.setIcon(QtGui.QIcon(getResPath('ico/about.png')))
         self.showAboutAction.triggered.connect(self.onAboutAction)
 
         self.selectAllItemsAction = QtGui.QAction('Select all', self)
         self.selectAllItemsAction.setShortcut(QtGui.QKeySequence.SelectAll)
         self.selectAllItemsAction.setStatusTip('Select all annoations')
-        self.selectAllItemsAction.setIcon(QtGui.QIcon(getAbsPath('ico/selectAll.png')))
+        self.selectAllItemsAction.setIcon(QtGui.QIcon(getResPath('ico/selectAll.png')))
         self.selectAllItemsAction.triggered.connect(self.onSelectAllItemAction)
 
         self.addAnnotationItemAction = QtGui.QAction('Add annotation', self)
         #self.addTextItemAction.setShortcut('Ctrl+L')
-        self.addAnnotationItemAction.setIcon(QtGui.QIcon(getAbsPath('ico/add.png')))
+        self.addAnnotationItemAction.setIcon(QtGui.QIcon(getResPath('ico/add.png')))
         self.addAnnotationItemAction.setStatusTip('Add annotation at mouse position')
         self.addAnnotationItemAction.triggered.connect(self.onAddTextItemAction)
 
         self.loadBackgroundImageAction = QtGui.QAction('Load background image', self)
         self.loadBackgroundImageAction.setShortcut('Ctrl+L')
         self.loadBackgroundImageAction.setStatusTip('Load background image')
-        self.loadBackgroundImageAction.setIcon(QtGui.QIcon(getAbsPath('ico/open.png')))
+        self.loadBackgroundImageAction.setIcon(QtGui.QIcon(getResPath('ico/open.png')))
         self.loadBackgroundImageAction.triggered.connect(self.onLoadBackgroundImageAction)
 
         self.clearAllAnnotationsItemAction = QtGui.QAction('Clear all', self)
         self.clearAllAnnotationsItemAction.setShortcut('Ctrl+L')
-        self.clearAllAnnotationsItemAction.setIcon(QtGui.QIcon(getAbsPath('ico/clear.png')))
+        self.clearAllAnnotationsItemAction.setIcon(QtGui.QIcon(getResPath('ico/clear.png')))
         self.clearAllAnnotationsItemAction.setStatusTip('Exit application')
         self.clearAllAnnotationsItemAction.triggered.connect(self.onClearAllAnnotationsItemsAction)
 
@@ -223,13 +234,13 @@ class MainWindow(QtGui.QMainWindow):
         self.exitAction = QtGui.QAction('Exit', self)
         self.exitAction.setShortcut(QtGui.QKeySequence.Quit)
         self.exitAction.setStatusTip('Exit application')
-        self.exitAction.setIcon(QtGui.QIcon(getAbsPath('ico/quit.png')))
+        self.exitAction.setIcon(QtGui.QIcon(getResPath('ico/quit.png')))
         self.exitAction.triggered.connect(self.onExitAction)
 
         self.saveAction = QtGui.QAction('Save', self)
         self.saveAction.setShortcut(QtGui.QKeySequence.Save)
         self.saveAction.setStatusTip('Save picture')
-        self.saveAction.setIcon(QtGui.QIcon(getAbsPath('ico/save.png')))
+        self.saveAction.setIcon(QtGui.QIcon(getResPath('ico/save.png')))
         self.saveAction.triggered.connect(self.onSaveImageAction)
 
 
@@ -248,7 +259,8 @@ class MainWindow(QtGui.QMainWindow):
         self.initMenuBar()
 
         self.setGeometry(300, 300, 640, 480)
-        self.setWindowTitle(QtGui.qApp.applicationName())
+        title = '%s v%s' % (QtGui.qApp.applicationName(), QtGui.qApp.applicationVersion())
+        self.setWindowTitle(title)
 
     def initSceneAndView(self):
         self.scene = QtGui.QGraphicsScene()
@@ -259,6 +271,7 @@ class MainWindow(QtGui.QMainWindow):
         self.view.textDropCallback = self.onViewTextDrop
 
         self.view.imageWheelZoomCallback = self.onViewImageScrollZoom
+        self.view.mouseRightClickCallback = self.onViewMouseRightClick
         #self.view.setRubberBandSelectionMode()
         self.view.setInteractive(True)
         #self.view.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
@@ -272,7 +285,7 @@ class MainWindow(QtGui.QMainWindow):
         deleteSelectionAction = QtGui.QAction('Delete', self.view)
         deleteSelectionAction.setStatusTip('Delete selection')
         deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
-        deleteSelectionAction.setIcon(QtGui.QIcon(getAbsPath('ico/delete.png')))
+        deleteSelectionAction.setIcon(QtGui.QIcon(getResPath('ico/delete.png')))
         deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         deleteSelectionAction.triggered.connect(self.onDeleteSelectionAction)
 
@@ -341,7 +354,7 @@ class MainWindow(QtGui.QMainWindow):
 
         addNewTextButton = QtGui.QPushButton(container)
         addNewTextButton.setText('Add')
-        addNewTextButton.setIcon(QtGui.QIcon(getAbsPath('ico/add.png')))
+        addNewTextButton.setIcon(QtGui.QIcon(getResPath('ico/add.png')))
         addNewTextButton.clicked.connect(self.onAddNewTextButton)
         containerLayout.addWidget(addNewTextButton)
 
@@ -349,14 +362,14 @@ class MainWindow(QtGui.QMainWindow):
 
         deleteSelectionAction = QtGui.QAction('Delete', self.annotationsList)
         deleteSelectionAction.setShortcut(QtGui.QKeySequence.Delete)
-        deleteSelectionAction.setIcon(QtGui.QIcon(getAbsPath('ico/delete.png')))
+        deleteSelectionAction.setIcon(QtGui.QIcon(getResPath('ico/delete.png')))
         deleteSelectionAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         deleteSelectionAction.triggered.connect(self.onTextListWidgetDeleteSelectionAction)
         self.annotationsList.addAction(deleteSelectionAction)
 
         addTextAction = QtGui.QAction('Add', self.annotationsList)
         addTextAction.setShortcut('+')
-        addTextAction.setIcon(QtGui.QIcon(getAbsPath('ico/add.png')))
+        addTextAction.setIcon(QtGui.QIcon(getResPath('ico/add.png')))
         addTextAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
         addTextAction.triggered.connect(self.onTextListWidgetAddAction)
         self.annotationsList.addAction(addTextAction)
@@ -381,16 +394,15 @@ class MainWindow(QtGui.QMainWindow):
 
     def onAboutAction(self):
         '''Popup a box with about message.'''
-        aboutTitle = 'about "%s"' % QtGui.qApp.applicationName()
-        aboutText = 'Made by "%s"\nplatform "%s"\npython "%s"\npyside "%s"\nQt "%s"\n' % (QtGui.qApp.organizationName(),
+        aboutTitle = 'About %s' % (self.windowTitle())
+        aboutText = 'Version "%s"\nMade by "%s"\nplatform "%s"\npython "%s"\npyside "%s"\nQt "%s"' % (QtGui.qApp.applicationVersion(),
+                                                                               QtGui.qApp.organizationName(),
                                                                                platform.system(),
                                                                                platform.python_version(),
                                                                                PySide.__version_info__,
                                                                                QtCore.__version_info__)
 
-
-        #aboutText += 'source code : <a href="https://github.com/Code4Beer2/Florentin">Trolltech</a>'
-
+        aboutText += '\t\t\t\t\t\t\t' # stupid padding to force QMessageBox to get bigger width
         QtGui.QMessageBox.about(self, aboutTitle, aboutText)
 
 
@@ -403,6 +415,9 @@ class MainWindow(QtGui.QMainWindow):
         self.userZoomIndex = max(self.userZoomIndex - 1, 0)
         self.updateViewScale()
         self.updateZoomComboBox()
+
+    def onViewMouseRightClick(self, event):
+        self.lastViewMouseRightClickPos = event.pos()
 
     def onViewImageScrollZoom(self, wheelDelta):
         if wheelDelta>0:
@@ -458,6 +473,28 @@ class MainWindow(QtGui.QMainWindow):
             self.annotationsList.addItem(item)
 
 
+    def addBackgroundImageItem(self, pixmap):
+        assert self.backgroundImageItem is None
+        self.backgroundImageItem = QtGui.QGraphicsPixmapItem(pixmap)
+        self.backgroundImageItem.setZValue(-100) # image should not be on top of other items
+        self.scene.addItem(self.backgroundImageItem)
+        self.scene.setSceneRect(pixmap.rect())
+
+
+    def createDefaultBackgroundImage(self):
+        assert self.backgroundImageItem is None
+        pixmap = QtGui.QPixmap(800, 600)
+        painter = QtGui.QPainter()
+
+        painter.begin(pixmap)
+        painter.setBrush(QtCore.Qt.gray)
+        painter.setPen(QtCore.Qt.black)
+        painter.fillRect(pixmap.rect(), QtCore.Qt.gray)
+        painter.drawText(pixmap.rect(), QtCore.Qt.AlignCenter, '<No Image Loaded>'),
+        painter.end()
+
+        self.addBackgroundImageItem(pixmap)
+
     def loadBackgroundImage(self, path):
         if self.backgroundImageItem:
             self.scene.removeItem(self.backgroundImageItem)
@@ -466,15 +503,7 @@ class MainWindow(QtGui.QMainWindow):
         image =  QtGui.QImage(path)
         pixmap = QtGui.QPixmap(image)
 
-        assert self.backgroundImageItem is None
-        self.backgroundImageItem = QtGui.QGraphicsPixmapItem(pixmap)
-        self.backgroundImageItem.setZValue(-100)
-        self.scene.addItem(self.backgroundImageItem)
-
-        #QtGui.QGraphicsView.adjustSize()
-
-        #ceneRect = image.rect()
-        #self.view.setSceneRect(sceneRect)
+        self.addBackgroundImageItem(pixmap)
 
         self.statusBar().showMessage('image %s loaded %d*%d' % (path, image.size().width(), image.size().height()))
 
@@ -487,7 +516,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def addAnnotationTextItem(self, text, viewPos):
-        #mousePos = self.view.mapFromGlobal(screenPos)
+
         scenePos = self.view.mapToScene(viewPos)
 
         textItem = TextItem()
@@ -496,15 +525,18 @@ class MainWindow(QtGui.QMainWindow):
         textItem.setDefaultTextColor(self.userColor)
         textItem.setFlag(QtGui.QGraphicsTextItem.ItemIsMovable)
         textItem.setFlag(QtGui.QGraphicsTextItem.ItemIsSelectable)
-        textItem.setPos(scenePos)
+        centeredPos = QtCore.QPointF(scenePos.x() - textItem.boundingRect().width()/2, scenePos.y() - textItem.boundingRect().height()/2)
+        textItem.setPos(centeredPos)
 
         self.scene.addItem(textItem)
 
     def onAddTextItemAction(self):
-        self.addAnnotationTextItem('default text', self.view.mapFromGlobal(QtGui.QCursor.pos()))
+        assert self.lastViewMouseRightClickPos
+        self.addAnnotationTextItem('default text', self.lastViewMouseRightClickPos)
 
     def onPredefinedAnnotationMenuItem(self, annotation):
-        self.addAnnotationTextItem(annotation, self.view.mapFromGlobal(QtGui.QCursor.pos()))
+        self.lastViewMouseRightClickPos
+        self.addAnnotationTextItem(annotation, self.lastViewMouseRightClickPos)
 
     def updateAddAnnotationItemActionSubMenu(self):
         menu = self.getPredefinedAnnotationsMenu()
@@ -727,7 +759,7 @@ def main():
     app = QtGui.QApplication(sys.argv)
     app.setOrganizationName('Laurent')
     app.setApplicationName('AnnotationDesigner')
-    app.setApplicationVersion('1.0')
+    app.setApplicationVersion('1.1')
     mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
