@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['main.py'],
+a = Analysis(['src/main.py'],
              pathex=['.'],
              hiddenimports=['PySide.QtCore','PySide.QtGui'],
 			 datas= [ ('ico', 'ico' ) ],
