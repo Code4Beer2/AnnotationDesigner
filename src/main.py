@@ -178,6 +178,8 @@ class MainWindow(QtGui.QMainWindow):
         for i in range(1,6):
             self.userPredefinedAnnotations.append('defaultText%d' % i)
 
+        self.userRecentImages = list()
+
         self.iniActions()
         self.initUI()
         self.readSettings()
@@ -243,7 +245,11 @@ class MainWindow(QtGui.QMainWindow):
         self.saveAction.setIcon(QtGui.QIcon(getResPath('ico/save.png')))
         self.saveAction.triggered.connect(self.onSaveImageAction)
 
-
+        self.recentImagesAction = QtGui.QAction('Recent Images', self)
+        #self.recentImagesAction.setShortcut(QtGui.QKeySequence.Save)
+        self.recentImagesAction.setStatusTip('Recent images which have been loaded')
+        #self.recentImagesAction.setIcon(QtGui.QIcon(getResPath('ico/save.png')))
+        #self.recentImagesAction.triggered.connect(self.onSaveImageAction)
 
         
     def initUI(self):
@@ -293,7 +299,7 @@ class MainWindow(QtGui.QMainWindow):
         self.view.addAction(self.loadBackgroundImageAction)
         self.view.addAction(self.addAnnotationItemAction)
         self.view.addAction(self.saveAction)
-
+        self.view.addAction(self.recentImagesAction)
 
         self.setCentralWidget(self.view)
 
@@ -302,6 +308,8 @@ class MainWindow(QtGui.QMainWindow):
         fileMenu = mainMenuBar.addMenu('&File')
         fileMenu.addAction(self.loadBackgroundImageAction)
         fileMenu.addAction(self.saveAction)
+        fileMenu.addSeparator()
+        fileMenu.addAction(self.recentImagesAction)
         fileMenu.addSeparator()
         fileMenu.addAction(self.exitAction)
 
@@ -435,11 +443,13 @@ class MainWindow(QtGui.QMainWindow):
         newText = self.getUniqueNewAnnotationText('new')
         self.userPredefinedAnnotations.append(newText)
         self.updateAnnotationsTextList()
+        self.updateAddAnnotationItemActionSubMenu()
 
     def onTextListWidgetDeleteSelectionAction(self):
         for selectedItem in self.annotationsList.selectedItems():
             self.userPredefinedAnnotations.remove(selectedItem.text())
         self.updateAnnotationsTextList()
+        self.updateAddAnnotationItemActionSubMenu()
 
     def getUniqueNewAnnotationText(self, text):
         newText = text
@@ -505,7 +515,15 @@ class MainWindow(QtGui.QMainWindow):
 
         self.addBackgroundImageItem(pixmap)
 
+        if(path not in self.userRecentImages):
+            self.userRecentImages.insert(0, path);
+            if(len(self.userRecentImages)>10):
+                self.userRecentImages.pop()
+
+        self.updateRecentBackgroundImagesSubMenu()
+
         self.statusBar().showMessage('image %s loaded %d*%d' % (path, image.size().width(), image.size().height()))
+
 
     def onLoadBackgroundImageAction(self):
         openFilename, ext = QtGui.QFileDialog.getOpenFileName(self, 'Load image', '', MainWindow.getReadImageFormatWildcards(), '*.jpg')
@@ -514,6 +532,25 @@ class MainWindow(QtGui.QMainWindow):
 
         self.loadBackgroundImage(openFilename)
 
+    def onLoadRecentImage(self, imagePath):
+        self.loadBackgroundImage(imagePath)
+
+    def updateRecentBackgroundImagesSubMenu(self):
+        menu = self.getRecentImagesMenu()
+        self.recentImagesAction.setMenu(menu)
+        self.recentImagesAction.setEnabled(True if menu else False)
+
+    def getRecentImagesMenu(self):
+        if len(self.userRecentImages) == 0:
+            return None
+
+        menu = QtGui.QMenu()
+
+        for imagePath in self.userRecentImages:
+            action = QtGui.QAction(imagePath, menu)
+            action.triggered.connect(lambda arg1=imagePath: self.onLoadRecentImage(arg1))
+            menu.addAction(action)
+        return menu
 
     def addAnnotationTextItem(self, text, viewPos):
 
@@ -541,8 +578,12 @@ class MainWindow(QtGui.QMainWindow):
     def updateAddAnnotationItemActionSubMenu(self):
         menu = self.getPredefinedAnnotationsMenu()
         self.addAnnotationItemAction.setMenu(menu)
+        self.addAnnotationItemAction.setEnabled(True if menu else False)
 
     def getPredefinedAnnotationsMenu(self):
+        if len(self.userPredefinedAnnotations) == 0:
+            return None
+
         menu = QtGui.QMenu()
         index = 1
         for annotation in self.userPredefinedAnnotations:
@@ -716,7 +757,7 @@ class MainWindow(QtGui.QMainWindow):
         settings.setValue('colorDialogPosition', self.colorDialogPosition)
         settings.setValue('lastSaveFolder', self.lastSaveFolder)
         settings.setValue('userPredefinedAnnotations', self.userPredefinedAnnotations)
-
+        settings.setValue('userRecentImages', self.userRecentImages)
 
     def readSettings(self):
         settings = MainWindow.getSettings()
@@ -731,10 +772,13 @@ class MainWindow(QtGui.QMainWindow):
 
         self.userPredefinedAnnotations = settings.value('userPredefinedAnnotations', self.userPredefinedAnnotations)
 
+        self.userRecentImages = settings.value('userRecentImages', self.userRecentImages)
+
         self.updateColorDialogAndColorButton()
         self.updateFontFamilyComboBoxAndSizeComboBox()
         self.updateAnnotationsTextList()
         self.updateAddAnnotationItemActionSubMenu()
+        self.updateRecentBackgroundImagesSubMenu()
 
     def updateFontFamilyComboBoxAndSizeComboBox(self):
         self.fontFamilyComboBox.setCurrentFont(self.userFont)
@@ -759,7 +803,7 @@ def main():
     app = QtGui.QApplication(sys.argv)
     app.setOrganizationName('Laurent')
     app.setApplicationName('AnnotationDesigner')
-    app.setApplicationVersion('1.1')
+    app.setApplicationVersion('1.11')
     mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
