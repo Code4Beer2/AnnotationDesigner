@@ -5,6 +5,7 @@ import PySide
 from PySide import QtGui
 from PySide import QtCore
 
+
 # get resource path
 def getResPath(relative):
     if hasattr(sys, "_MEIPASS"): # if frozen with pyApplication
@@ -800,6 +801,10 @@ class MainWindow(QtGui.QMainWindow):
         self.zoomComboBox.setCurrentIndex(self.userZoomIndex)
 
 def main():
+    # when executing from network
+    QtCore.QCoreApplication.addLibraryPath(os.path.join(os.path.dirname(QtCore.__file__), "plugins"))
+    QtGui.QImageReader.supportedImageFormats()
+
     app = QtGui.QApplication(sys.argv)
     app.setOrganizationName('Laurent')
     app.setApplicationName('AnnotationDesigner')
