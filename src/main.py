@@ -808,7 +808,7 @@ def main():
     app = QtGui.QApplication(sys.argv)
     app.setOrganizationName('Laurent')
     app.setApplicationName('AnnotationDesigner')
-    app.setApplicationVersion('1.11')
+    app.setApplicationVersion('1.12')
     mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
