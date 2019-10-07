@@ -1,9 +1,8 @@
 import os
 import sys
 import platform
-import PySide
-from PySide import QtGui
-from PySide import QtCore
+import PySide2
+from PySide2 import QtCore, QtGui, QtWidgets
 
 
 # get resource path
@@ -14,14 +13,14 @@ def getResPath(relative):
 
 beginEditableEvent = QtCore.QEvent.registerEventType()
 
-class TextItem(QtGui.QGraphicsTextItem):
+class TextItem(QtWidgets.QGraphicsItem):
 
     def __init__(self, parent=None, scene=None):
         super(TextItem, self).__init__(parent, scene)
         #self.setFocusProxy(QtGui.QTextEdit())
 
-        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
+        self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
+        self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
 
     def focusOutEvent(self, event):
         cursor = self.textCursor()
@@ -55,13 +54,13 @@ class TextItem(QtGui.QGraphicsTextItem):
         return super(TextItem, self).event(ev)
 
 
-class AddTextItemCmd(QtGui.QUndoCommand):
+class AddTextItemCmd(QtWidgets.QUndoCommand):
 
     def __init__(self, scene):
         super(AddTextItemCmd, self).__init__(scene)
 
 
-class ListWidget(QtGui.QListWidget):
+class ListWidget(QtWidgets.QListWidget):
     def __init__(self, parent):
         super(ListWidget, self).__init__(parent)
 
