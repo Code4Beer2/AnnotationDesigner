@@ -194,6 +194,7 @@ void AnnotationDesigner::initSceneAndView()
 	connect(my_scene, &QGraphicsScene::selectionChanged, this, &AnnotationDesigner::onSceneSelectionChanged);
 
 	my_view = new QGraphicsView();//GraphicsView(my_scene);
+	my_view->setScene(my_scene);
 // 		my_view->imageDropCallback = onViewImageDrop;
 // 		my_view->textDropCallback = onViewTextDrop;
 // 
@@ -628,8 +629,8 @@ QString AnnotationDesigner::getImageFormatWildcards(const QList<QByteArray>& ima
 		for (auto imageFormat : imageFormats)
 		{
 			formatsWildcards += QString("*.%1 ").arg(QString(imageFormat));
-			formatsWildcards += ");;";
 		}
+		formatsWildcards += ");;";
 	}
 
 	return formatsWildcards;
