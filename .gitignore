@@ -1,9 +1,12 @@
 #folder we don't want
-build
-dist
-.idea
-tmp
+Python/build/*
+Python/dist/*
+Python/.idea/*
+Python/tmp/*
 
+Cpp/GeneratedFiles/*
+Cpp/.vs/*
+Cpp/x64/*
 
 # Windows image file caches
 Thumbs.db
