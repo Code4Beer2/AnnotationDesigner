@@ -1,15 +1,19 @@
 #include "AnnotationDesigner.h"
+
 #include "qevent.h"
-#include "QGraphicsItem"
-#include "QMessageBox"
-#include "QFileDialog"
+#include <QtWidgets/QGraphicsItem>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QFileDialog>
+#include "QMimeData"
+#include "QVariant"
+#include <QtGui/QTextCursor>
 // AnnotationDesigner::AnnotationDesigner(QWidget *parent)
 // 	: QMainWindow(parent)
 // {
 // 	//ui.setupUi(this);
 // }
 
-AnnotationDesigner::AnnotationDesigner(QWidget *parent /*= Q_NULLPTR*/)
+AnnotationDesigner::AnnotationDesigner(QWidget *parent)
 {
 	//super(MainWindow, self).__init__()
 
@@ -51,7 +55,7 @@ QMenu* AnnotationDesigner::getRecentImagesMenu()
 
 	QMenu* menu = new QMenu();
 
-	for (auto imagePath : my_userRecentImages)
+	for (auto imagePath : my_userRecentImagesPaths)
 	{
 		QAction* action = new QAction(imagePath, menu);
 		connect(action, &QAction::triggered, this, [&]() {onLoadRecentImage(imagePath); });
@@ -87,13 +91,13 @@ void AnnotationDesigner::updateColorAndFontWithSelectionValues()
 	QList<QGraphicsItem *> selectedItems = my_scene->selectedItems();
 	const int numItem = selectedItems.count();
 
-	if (numItem == 1)
+	if (numItem > 0)
 	{
-		QGraphicsItem * firstItem = selectedItems[0];
-		if (QGraphicsTextItem* firstTextItem = dynamic_cast<QGraphicsTextItem*>(firstItem))
+		QGraphicsItem* firstItem = selectedItems[0];
+		if (TextItem* firstTextItem = dynamic_cast<TextItem*>(firstItem))
 		{
-			QFont my_userFont = firstTextItem->font();
-			QColor my_userColor = firstTextItem->defaultTextColor();
+			my_userFont = firstTextItem->font();
+			my_userColor = firstTextItem->defaultTextColor();
 
 			updateColorDialogAndColorButton();
 			updateFontFamilyComboBoxAndSizeComboBox();
@@ -103,22 +107,19 @@ void AnnotationDesigner::updateColorAndFontWithSelectionValues()
 
 void AnnotationDesigner::iniActions()
 {
-	//(\w + )->(\w + )\.connect\((\w + )\);
-	//connect($1, &QAction::$2, this, &AnnotationDesigner::$3);
-
 	setAcceptDrops(true);
 
-	zoomInAction = new QAction(QString("ZoomIn"), this);
-	zoomInAction->setStatusTip("Zoom in");
-	zoomInAction->setShortcut(QKeySequence::ZoomIn);
-	zoomInAction->setIcon(QIcon(("ico/zoomIn.png")));
-	connect(zoomInAction, &QAction::triggered, this, &AnnotationDesigner::onZoomInAction);
+	myZoomInAction = new QAction(QString("ZoomIn"), this);
+	myZoomInAction->setStatusTip("Zoom in");
+	myZoomInAction->setShortcut(QKeySequence::ZoomIn);
+	myZoomInAction->setIcon(QIcon(("ico/zoomIn.png")));
+	connect(myZoomInAction, &QAction::triggered, this, &AnnotationDesigner::onZoomInAction);
 
-	zoomOutAction = new QAction("ZoomOut", this);
-	zoomOutAction->setStatusTip("Zoom out");
-	zoomOutAction->setShortcut(QKeySequence::ZoomOut);
-	zoomOutAction->setIcon(QIcon(("ico/zoomOut.png")));
-	connect(zoomOutAction, &QAction::triggered, this, &AnnotationDesigner::onZoomOutAction);
+	myZoomOutAction = new QAction("ZoomOut", this);
+	myZoomOutAction->setStatusTip("Zoom out");
+	myZoomOutAction->setShortcut(QKeySequence::ZoomOut);
+	myZoomOutAction->setIcon(QIcon(("ico/zoomOut.png")));
+	connect(myZoomOutAction, &QAction::triggered, this, &AnnotationDesigner::onZoomOutAction);
 
 	my_showAboutAction = new QAction("About", this);
 	my_showAboutAction->setMenuRole(QAction::AboutRole);
@@ -145,11 +146,10 @@ void AnnotationDesigner::iniActions()
 	connect(my_loadBackgroundImageAction, &QAction::triggered, this, &AnnotationDesigner::onLoadBackgroundImageAction);
 
 	my_clearAllAnnotationsItemAction = new QAction("Clear all", this);
-	my_clearAllAnnotationsItemAction->setShortcut(QKeySequence("Ctrl+L"));
+	my_clearAllAnnotationsItemAction->setShortcut(QKeySequence("Ctrl+C"));
 	my_clearAllAnnotationsItemAction->setIcon(QIcon(("ico/clear.png")));
 	my_clearAllAnnotationsItemAction->setStatusTip("Exit application");
 	connect(my_clearAllAnnotationsItemAction, &QAction::triggered, this, &AnnotationDesigner::onClearAllAnnotationsItemsAction);
-
 
 	my_exitAction = new QAction("Exit", this);
 	my_exitAction->setShortcut(QKeySequence::Quit);
@@ -193,13 +193,13 @@ void AnnotationDesigner::initSceneAndView()
 	my_scene = new QGraphicsScene();
 	connect(my_scene, &QGraphicsScene::selectionChanged, this, &AnnotationDesigner::onSceneSelectionChanged);
 
-	my_view = new QGraphicsView();//GraphicsView(my_scene);
+	my_view = new GraphicsView();
 	my_view->setScene(my_scene);
-// 		my_view->imageDropCallback = onViewImageDrop;
-// 		my_view->textDropCallback = onViewTextDrop;
+	my_view->my_imageDropCallback = [&](const QString& anImagePath) { onViewImageDrop(anImagePath); };
+	my_view->my_textDropCallback = [&](const QString& aText, const QPoint& aDropPos) { onViewTextDrop(aText, aDropPos); };
 // 
-// 		my_view->imageWheelZoomCallback = onViewImageScrollZoom;
-// 		my_view->mouseRightClickCallback = onViewMouseRightClick;
+ 	my_view->my_imageWheelZoomCallback = [&](int aDelta) { onViewImageScrollZoom(aDelta); };
+ 	my_view->my_mouseRightClickCallback = [&](const QMouseEvent* aMouseEvent) { onViewMouseRightClick(aMouseEvent); };
 		//#my_view->setRubberBandSelectionMode();
 	my_view->setInteractive(true);
 	//#my_view->setTransformationAnchor(QGraphicsView.AnchorUnderMouse);
@@ -253,7 +253,15 @@ void AnnotationDesigner::initToolBar()
 
 	connect(my_fontSizeComboBox, qOverload<int>(&QComboBox::activated), this, &AnnotationDesigner::onFontSizeComboBoxChanged);
 
+// 	QFrame* colorButtonFrame = new QFrame();
+// 	colorButtonFrame->setFrameStyle(QFrame::StyledPanel);
+// 	colorButtonFrame->setLineWidth(2);
+// 	QHBoxLayout* colorButtonFrameLayout = new QHBoxLayout();
+// 	colorButtonFrame->setLayout(colorButtonFrameLayout);
+
+
 	my_colorButton = new QPushButton();
+	//colorButtonFrameLayout->addWidget(my_colorButton);
 	connect(my_colorButton, &QPushButton::clicked, this, &AnnotationDesigner::onShowColorDialog);
 	updateColorDialogAndColorButton();
 
@@ -277,8 +285,8 @@ void AnnotationDesigner::initToolBar()
 	toolbar->addWidget(my_fontSizeComboBox);
 	toolbar->addWidget(my_colorButton);
 	toolbar->addWidget(my_zoomComboBox);
-	toolbar->addAction(zoomInAction);
-	toolbar->addAction(zoomOutAction);
+	toolbar->addAction(myZoomInAction);
+	toolbar->addAction(myZoomOutAction);
 }
 
 void AnnotationDesigner::initAnnotationsDock()
@@ -372,9 +380,9 @@ void AnnotationDesigner::zoomOut()
 	updateZoomComboBox();
 }
 
-void AnnotationDesigner::onViewMouseRightClick(const QMouseEvent& anEvent)
+void AnnotationDesigner::onViewMouseRightClick(const QMouseEvent* anEvent)
 {
-	my_lastViewMouseRightClickPos = anEvent.pos();
+	my_lastViewMouseRightClickPos = anEvent->pos();
 }
 
 void AnnotationDesigner::onViewImageScrollZoom(int aWheelData)
@@ -505,12 +513,12 @@ void AnnotationDesigner::loadBackgroundImage(const QString& path)
 
 	addBackgroundImageItem(pixmap);
 
-	if (!my_userRecentImages.contains(path))
+	if (!my_userRecentImagesPaths.contains(path))
 	{
-		my_userRecentImages.insert(0, path);
-		if ((my_userRecentImages.length()) > 10)
+		my_userRecentImagesPaths.insert(0, path);
+		if ((my_userRecentImagesPaths.length()) > 10)
 		{
-			my_userRecentImages.pop_back();
+			my_userRecentImagesPaths.pop_back();
 
 			updateRecentBackgroundImagesSubMenu();
 			statusBar()->showMessage(QString("image %1 loaded %2*%3").arg(path, pixmap.size().width(), pixmap.size().height()));
@@ -525,7 +533,7 @@ void AnnotationDesigner::onSelectAllItemAction()
 	QVector<QGraphicsItem*> selectItems;
 	for (QGraphicsItem* item : allItems)
 	{
-		if (QGraphicsTextItem* textItem = dynamic_cast<QGraphicsTextItem*>(item))
+		if (TextItem* textItem = dynamic_cast<TextItem*>(item))
 		{
 			selectItems.append(item);
 			textItem->setSelected(true);
@@ -577,7 +585,7 @@ void AnnotationDesigner::addAnnotationTextItem(const QString& text, const QPoint
 {
 	QPointF scenePos = my_view->mapToScene(viewPos);
 
-	QGraphicsTextItem* textItem = new QGraphicsTextItem();// TextItem(); TODO
+	TextItem* textItem = new TextItem();
 	textItem->setPlainText(text);
 	textItem->setFont(my_userFont);
 	textItem->setDefaultTextColor(my_userColor);
@@ -670,7 +678,7 @@ void AnnotationDesigner::onSaveImageAction()
 
 	QString ext = "*.jpg";
 	QString saveFilename = QFileDialog::getSaveFileName(this, 
-		"Save file",
+		tr("Save file"),
 		my_lastSaveFolder,
 		getSaveImageFormatWildcards(),
 		&ext);
@@ -687,11 +695,14 @@ void AnnotationDesigner::onSaveImageAction()
 	QPainter savedPixmapPainter = QPainter(&savedPixmap);
 	my_scene->clearSelection(); //#clear selection so we don"t render selection boxes
 	my_scene->render(&savedPixmapPainter, saveRect, saveRect);
-	//cleanedExt = ext;
-	savedPixmap.save(saveFilename, ext.toLatin1());
+
+	const bool saved = savedPixmap.save(saveFilename);
 	savedPixmapPainter.end();
 
-	statusBar()->showMessage(QString("image saved to \"%1\"").arg(saveFilename));
+	if(saved)
+		statusBar()->showMessage(QString("image saved to \"%1\"").arg(saveFilename));
+	else
+		statusBar()->showMessage(QString("failed to save to \"%1\"").arg(saveFilename));
 }
 
 void AnnotationDesigner::onClearAllAnnotationsItemsAction()
@@ -735,7 +746,7 @@ void AnnotationDesigner::updateSelectionColorAndFont()
 {
 	for (auto item : my_scene->selectedItems())
 	{
-		if (QGraphicsTextItem* textItem = dynamic_cast<QGraphicsTextItem*>(item))
+		if (TextItem* textItem = dynamic_cast<TextItem*>(item))
 		{
 			textItem->setDefaultTextColor(my_userColor);
 			textItem->setFont(my_userFont);
@@ -778,41 +789,66 @@ QSettings AnnotationDesigner::getSettings()
 
 void AnnotationDesigner::saveSettings()
 {
-// 	QSettings settings = getSettings();
-// 	settings.setValue("geometry", saveGeometry());
-// 	settings.setValue("windowState", saveState());
-// 	settings.setValue("userColor", my_userColor);
-// 	settings.setValue("userFont", my_userFont.toString());
-// 	if(my_colorDialogPosition.has_value())
-// 		settings.setValue("colorDialogPosition", my_colorDialogPosition.value());
-// 	settings.setValue("lastSaveFolder", my_lastSaveFolder);
-// 	settings.setValue("userPredefinedAnnotations", my_userPredefinedAnnotations);
-// 	settings.setValue("userRecentImages", my_userRecentImages);
+	QSettings settings = getSettings();
+
+	settings.setValue("mainWindowGeometry", saveGeometry());
+	settings.setValue("mainWindowState", saveState());
+	
+	settings.setValue("userColor", my_userColor.rgb());
+	settings.setValue("userFont", my_userFont.toString());
+
+	QVariant colorDialogPositionValue;
+	if (my_colorDialogPosition.has_value())
+		colorDialogPositionValue = my_colorDialogPosition.value();
+
+	settings.setValue("colorDialogPosition", colorDialogPositionValue);
+	settings.setValue("lastSaveFolder", my_lastSaveFolder);
+	settings.setValue("userPredefinedAnnotations", my_userPredefinedAnnotations);
+	settings.setValue("userRecentImages", my_userRecentImagesPaths);
 }
 
 void AnnotationDesigner::readSettings()
 {
-// 	QSettings settings = getSettings();
-// 	restoreGeometry(settings.value("geometry"));
-// 	restoreState(settings.value("windowState"));
-// 	my_userColor = settings.value("userColor", my_userColor);
-// 	QVariant fontString = settings.value("userFont", "");
-// 	if (fontString.str)
-// 	{
-// 		my_userFont.fromString(fontString);
-// 		my_colorDialogPosition = settings.value("colorDialogPosition", my_colorDialogPosition);
-// 		my_lastSaveFolder = settings.value("lastSaveFolder", my_lastSaveFolder);
-// 
-// 		my_userPredefinedAnnotations = settings.value("userPredefinedAnnotations", my_userPredefinedAnnotations);
-// 
-// 		my_userRecentImages = settings.value("userRecentImages", my_userRecentImages);
-// 
-// 		updateColorDialogAndColorButton();
-// 		updateFontFamilyComboBoxAndSizeComboBox();
-// 		updateAnnotationsTextList();
-// 		updateAddAnnotationItemActionSubMenu();
-// 		updateRecentBackgroundImagesSubMenu();
-// 	}
+	QSettings settings = getSettings();
+
+	const QVariant mainwindowGeometryValue = settings.value("mainWindowGeometry");
+	if(mainwindowGeometryValue.type() == QVariant::ByteArray)
+		restoreGeometry(mainwindowGeometryValue.toByteArray());
+
+	const QVariant mainWindowStateValue = settings.value("mainWindowState");
+	if (mainWindowStateValue.type() == QVariant::ByteArray)
+		restoreState(mainWindowStateValue.toByteArray());
+
+	const QVariant userColorValue = settings.value("userColor");
+	if (userColorValue.type() == QVariant::Int)
+		my_userColor = userColorValue.toInt();
+
+	const QVariant userFontValue = settings.value("userFont");
+	if (userFontValue.type() == QVariant::String)
+		my_userFont.fromString(userFontValue.toString());
+
+	my_colorDialogPosition = my_colorDialogPosition;
+	QVariant colorDialogPositionValue = settings.value("colorDialogPosition");
+	if (colorDialogPositionValue.type() == QVariant::Point)
+		my_colorDialogPosition = colorDialogPositionValue.toPoint();
+		
+	const QVariant lastSaveFolderValue = settings.value("lastSaveFolder");
+	if (lastSaveFolderValue.type() == QVariant::String)
+		my_lastSaveFolder = lastSaveFolderValue.toString();
+
+	const QVariant userPredefinedAnnotationsValue = settings.value("userPredefinedAnnotations");
+	if (userPredefinedAnnotationsValue.type() == QVariant::StringList)
+		my_userPredefinedAnnotations = userPredefinedAnnotationsValue.toStringList();
+
+	const QVariant userRecentImagesValue = settings.value("userRecentImages");
+	if (userRecentImagesValue.type() == QVariant::StringList)
+		my_userRecentImagesPaths = userRecentImagesValue.toStringList();
+
+	updateColorDialogAndColorButton();
+	updateFontFamilyComboBoxAndSizeComboBox();
+	updateAnnotationsTextList();
+	updateAddAnnotationItemActionSubMenu();
+	updateRecentBackgroundImagesSubMenu();
 }
 
 void AnnotationDesigner::updateFontFamilyComboBoxAndSizeComboBox()
@@ -838,4 +874,177 @@ void AnnotationDesigner::updateColorDialogAndColorButton()
 void AnnotationDesigner::updateZoomComboBox()
 {
 	my_zoomComboBox->setCurrentIndex(my_userZoomIndex);
+}
+
+//////////////////////////////////////////////////////////////////////////
+GraphicsView::GraphicsView()
+{
+	setAcceptDrops(true);
+}
+
+GraphicsView::~GraphicsView()
+{
+
+}
+
+void GraphicsView::mouseReleaseEvent(QMouseEvent* aMouseEvent)
+{
+	Super::mouseReleaseEvent(aMouseEvent);
+
+	if (aMouseEvent->button() == Qt::RightButton)
+	{
+		if (my_mouseRightClickCallback)
+		{
+			my_mouseRightClickCallback(aMouseEvent);
+		}
+	}
+}
+
+void GraphicsView::wheelEvent(QWheelEvent* aWheelEvent)
+{
+	const Qt::KeyboardModifiers keyModifiers = aWheelEvent->modifiers();
+	if (keyModifiers & Qt::CTRL)
+	{
+		if (my_imageWheelZoomCallback)
+		{
+			const int delta = aWheelEvent->delta();
+			my_imageWheelZoomCallback(delta);
+			aWheelEvent->accept();
+		}
+	}
+
+	Super::wheelEvent(aWheelEvent);
+}
+
+void GraphicsView::dragEnterEvent(QDragEnterEvent* aDragEnterEvent)
+{
+	const QMimeData* dragEnterEventMimeData = aDragEnterEvent->mimeData();
+
+	if (dragEnterEventMimeData->hasUrls() || dragEnterEventMimeData->hasText())
+		aDragEnterEvent->accept();
+	else
+		aDragEnterEvent->ignore();
+
+//	Super::dragEnterEvent(aDragEnterEvent);
+}
+
+void GraphicsView::dragMoveEvent(QDragMoveEvent* aDragMoveEvent)
+{
+	const QMimeData* dragMoveEventMimeData = aDragMoveEvent->mimeData();
+
+	if (dragMoveEventMimeData->hasUrls() || dragMoveEventMimeData->hasText())
+	{
+		aDragMoveEvent->setDropAction(Qt::CopyAction);
+		aDragMoveEvent->accept();
+	}
+	else
+	{
+		aDragMoveEvent->ignore();
+	}
+
+//	Super::dragMoveEvent(aDragMoveEvent);
+}
+
+void GraphicsView::dropEvent(QDropEvent* aDropEvent)
+{
+	const QMimeData* dropEventMimeData = aDropEvent->mimeData();
+
+	if (dropEventMimeData->hasUrls())
+	{
+		aDropEvent->setDropAction(Qt::CopyAction);
+		aDropEvent->accept();
+
+		const QUrl firstUrl = dropEventMimeData->urls()[0];
+		const QString firstLocalFilePath = firstUrl.toLocalFile();
+
+		if (my_imageDropCallback)
+			my_imageDropCallback(firstLocalFilePath);
+	}
+	else if (dropEventMimeData->hasText())
+	{
+		aDropEvent->setDropAction(Qt::CopyAction);
+		aDropEvent->accept();
+
+		const QString text = dropEventMimeData->text();
+
+		if (my_textDropCallback)
+			my_textDropCallback(text, aDropEvent->pos());
+	}
+	else
+	{
+		aDropEvent->ignore();
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+ListWidget::ListWidget(QWidget *parent)
+{
+	setDragDropMode(QAbstractItemView::DragOnly);
+}
+
+QMimeData* ListWidget::mimeData(const QList<QListWidgetItem*> items) const
+{
+	QMimeData* data = Super::mimeData(items);
+
+	QListWidgetItem* item = items[0];
+	const QString itemText = item->text();
+
+	data->setData(qApp->applicationName(), itemText.toLocal8Bit());
+	data->setText(itemText);
+
+	return data;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+
+const QEvent::Type TextItem::ourBeginEditableEventType = static_cast<QEvent::Type>(QEvent::registerEventType());
+
+TextItem::TextItem(QGraphicsItem* parent /*= nullptr*/)
+{
+	setFlag(QGraphicsItem::ItemIsMovable);
+	setFlag(QGraphicsItem::ItemIsSelectable);
+}
+
+TextItem::~TextItem()
+{
+	QCoreApplication::instance()->removePostedEvents(this);
+}
+
+void TextItem::focusOutEvent(QFocusEvent* aFocusEvent)
+{
+	QTextCursor cursor = textCursor();
+	cursor.movePosition(QTextCursor::End);
+	setTextCursor(cursor);
+	setTextInteractionFlags(Qt::NoTextInteraction);
+
+	Super::focusOutEvent(aFocusEvent);
+	//super(TextItem, self).focusOutEvent(event)
+}
+
+void TextItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* aMouseEvent)
+{
+	QEvent* beginEditableEvent = new QEvent(ourBeginEditableEventType);
+	QCoreApplication::instance()->postEvent(this, beginEditableEvent);
+
+	Super::mouseDoubleClickEvent(aMouseEvent);
+	//super(TextItem, self).mouseDoubleClickEvent(event);
+}
+
+bool TextItem::event(QEvent* anEvent)
+{
+	if (anEvent->type() == ourBeginEditableEventType && textInteractionFlags() == Qt::NoTextInteraction)
+	{
+		//#print "goeditable"
+		setTextInteractionFlags(Qt::TextEditorInteraction);
+		// 			#cursor = my_textCursor();
+		// 			#cursor.movePosition(QTextCursor.End);
+					//#my_setTextCursor(cursor);
+		setFocus();
+
+		return true;
+	}
+
+	return Super::event(anEvent);
 }
