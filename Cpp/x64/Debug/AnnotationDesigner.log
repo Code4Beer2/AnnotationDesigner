@@ -1,7 +1,2 @@
-﻿  Moc'ing AnnotationDesigner.h...
-  C:\GitHub\AnnotationDesigner\Cpp\AnnotationDesigner.h(0): Note: No relevant classes found. No output generated.
-  AnnotationDesigner.cpp
-  main.cpp
-  moc_AnnotationDesigner.cpp
-c:\github\annotationdesigner\cpp\annotationdesigner.h(220): fatal error C1075: '{': no matching token found (compiling source file main.cpp)
-c:\github\annotationdesigner\cpp\annotationdesigner.h(220): fatal error C1075: '{': no matching token found (compiling source file AnnotationDesigner.cpp)
+﻿  AnnotationDesigner.cpp
+  AnnotationDesigner.vcxproj -> C:\GitHub\AnnotationDesigner\Cpp\x64\Debug\AnnotationDesigner.exe

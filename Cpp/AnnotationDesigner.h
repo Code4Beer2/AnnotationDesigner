@@ -39,10 +39,6 @@
 #include <QtWidgets/QComboBox>
 #include <functional>
 
-//#include <optional>
-//#include "ui_AnnotationDesigner.h"
-
-
 
 class TextItem : public QGraphicsTextItem
 {
@@ -52,19 +48,12 @@ class TextItem : public QGraphicsTextItem
 public:
 	static const QEvent::Type ourBeginEditableEventType;
 
-	TextItem(QGraphicsItem* parent = nullptr);
+	TextItem(QGraphicsItem* aParent = nullptr);
 	~TextItem();
 
 	void focusOutEvent(QFocusEvent* aFocusEvent) override;
 	void mouseDoubleClickEvent(QGraphicsSceneMouseEvent* aMouseEvent) override;
 	bool event(QEvent* anEvent) override;
-
-	// 	#void keyReleaseEvent(self, event) 
-// {
-// 	#    print "keyReleaseEvent"
-// 	#    goEditable = QEvent(QEvent.Type(eventId))
-// 	#    QCoreApplication.instance().postEvent(self, goEditable)
-// 	#    super(TextItem, self).keyReleaseEvent(event)
 };
 
 class GraphicsView : public QGraphicsView
@@ -88,72 +77,31 @@ public:
 	void dropEvent(QDropEvent* aDropEvent) override;
 };
 
-
-
-
 class ListWidget : public QListWidget
 {
 	typedef QListWidget Super;
 
 	Q_OBJECT
 public:
-	ListWidget(QWidget *parent = nullptr);
+	ListWidget(QWidget* aParent = nullptr);
 	QMimeData* mimeData(const QList<QListWidgetItem*> items) const override;
 };
 
 class AnnotationDesigner : public QMainWindow
 {
 	typedef QMainWindow Super;
-
 	Q_OBJECT
 
-
-private:
-	QVector<int> my_zoomValues;
-	QColorDialog* my_colorDialog;
-	int my_userZoomIndex = 0;
-	QColor my_userColor;
-	QFont my_userFont;
-	QRect my_mainWindowRect;
-	std::optional<QPoint> my_colorDialogPosition;
-	QString my_lastSaveFolder;
-	QString my_lastSaveExt;
-	QUndoStack* my_cmdStack = nullptr;
-	QGraphicsPixmapItem* my_backgroundImageItem;
-	QPoint my_lastViewMouseRightClickPos;
-	QStringList my_userPredefinedAnnotations;
-	QStringList my_userRecentImagesPaths;
-
-
-	
-	QAction* myZoomInAction = nullptr;
-	QAction* myZoomOutAction = nullptr;
-	QAction* my_showAboutAction = nullptr;
-	QAction* my_selectAllItemsAction = nullptr;
-	QAction* my_addAnnotationItemAction = nullptr;
-
-	QAction* my_loadBackgroundImageAction = nullptr;
-	QAction* my_clearAllAnnotationsItemAction = nullptr;
-	QAction* my_exitAction = nullptr;
-	QAction* my_saveAction = nullptr;
-	QAction* my_recentImagesAction = nullptr;
-
-	QGraphicsScene* my_scene = nullptr;
-	GraphicsView* my_view = nullptr;
-
-	QPushButton* my_colorButton = nullptr;
-	QFontComboBox* my_fontFamilyComboBox = nullptr;
-	QComboBox* my_fontSizeComboBox = nullptr;
-	QComboBox* my_zoomComboBox = nullptr;
-
-	ListWidget* my_annotationsList = nullptr;
-
 public:
+
+	AnnotationDesigner(QWidget* aParent = nullptr);
+
+protected:
 	static QString getImageFormatWildcards(const QList<QByteArray>& imageFormats, bool splittedValue);
 	static QString getReadImageFormatWildcards();
 	static QString getSaveImageFormatWildcards();
 
-	AnnotationDesigner(QWidget *parent = nullptr);
+	static const QVector<int> ourZoomValues;
 
 	QMenu* getRecentImagesMenu();
 	QMenu* getPredefinedAnnotationsMenu();
@@ -166,7 +114,7 @@ public:
 	void addBackgroundImageItem(const QPixmap& pixmap);
 	void closeEvent(QCloseEvent* anEvent) override;
 	void createDefaultBackgroundImage();
-	void iniActions();
+	void initActions();
 	void initAnnotationsDock();
 	void initMenuBar();
 	void initSceneAndView();
@@ -212,4 +160,40 @@ public:
 	void updateZoomComboBox();
 	void zoomIn();
 	void zoomOut();
+
+private:
+	QColorDialog* my_colorDialog;
+	int my_userZoomIndex = 0;
+	QColor my_userColor;
+	QFont my_userFont;
+	QRect my_mainWindowRect;
+	std::optional<QPoint> my_colorDialogPosition;
+	QString my_lastSaveFolder;
+	QString my_lastSaveExt;
+	QGraphicsPixmapItem* my_backgroundImageItem;
+	QPoint my_lastViewMouseRightClickPos;
+	QStringList my_userPredefinedAnnotations;
+	QStringList my_userRecentImagesPaths;
+
+	QAction* myZoomInAction = nullptr;
+	QAction* myZoomOutAction = nullptr;
+	QAction* my_showAboutAction = nullptr;
+	QAction* my_selectAllItemsAction = nullptr;
+	QAction* my_addAnnotationItemAction = nullptr;
+
+	QAction* my_loadBackgroundImageAction = nullptr;
+	QAction* my_clearAllAnnotationsItemAction = nullptr;
+	QAction* my_exitAction = nullptr;
+	QAction* my_saveAction = nullptr;
+	QAction* my_recentImagesAction = nullptr;
+
+	QGraphicsScene* my_scene = nullptr;
+	GraphicsView* my_view = nullptr;
+
+	QPushButton* my_colorButton = nullptr;
+	QFontComboBox* my_fontFamilyComboBox = nullptr;
+	QComboBox* my_fontSizeComboBox = nullptr;
+	QComboBox* my_zoomComboBox = nullptr;
+
+	ListWidget* my_annotationsList = nullptr;
 };

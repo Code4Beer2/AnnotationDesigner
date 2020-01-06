@@ -7,22 +7,16 @@
 #include "QMimeData"
 #include "QVariant"
 #include <QtGui/QTextCursor>
-// AnnotationDesigner::AnnotationDesigner(QWidget *parent)
-// 	: QMainWindow(parent)
-// {
-// 	//ui.setupUi(this);
-// }
 
-AnnotationDesigner::AnnotationDesigner(QWidget *parent)
+
+AnnotationDesigner::AnnotationDesigner(QWidget* aParent)
+: Super(aParent)
+, my_backgroundImageItem(nullptr)
 {
-	//super(MainWindow, self).__init__()
-
-	setWindowIcon(QIcon("ico/app.ico"));
-
-	my_zoomValues = { 10, 20, 50, 100, 120, 150, 200, 300, 400 };
+	setWindowIcon(QIcon(":/ico/app.ico"));
 
 	//default values
-	my_userZoomIndex = my_zoomValues.indexOf(100);
+	my_userZoomIndex = ourZoomValues.indexOf(100);
 	my_userColor = QColor(255, 0, 0, 255);
 	my_userFont = QFont();
 	my_mainWindowRect = QRect(300, 300, 400, 600);
@@ -30,18 +24,13 @@ AnnotationDesigner::AnnotationDesigner(QWidget *parent)
 	my_lastSaveFolder = "./";
 	my_lastSaveExt = ".png";
 
-	my_cmdStack = new QUndoStack();
-
+	//my_cmdStack = new QUndoStack();
 	my_backgroundImageItem = nullptr;
-
-	//my_lastViewMouseRightClickPos = nullptr;
 
 	for (int i = 1; i < 6; ++i)
 		my_userPredefinedAnnotations.append(QString("defaultText%1").arg(i));
 
-
-
-	iniActions();
+	initActions();
 	initUI();
 	readSettings();
 
@@ -50,12 +39,9 @@ AnnotationDesigner::AnnotationDesigner(QWidget *parent)
 
 QMenu* AnnotationDesigner::getRecentImagesMenu()
 {
-// 	if (my_userRecentImages.count() == 0)
-// 		return nullptr;
-
 	QMenu* menu = new QMenu();
 
-	for (auto imagePath : my_userRecentImagesPaths)
+	for (const QString& imagePath : my_userRecentImagesPaths)
 	{
 		QAction* action = new QAction(imagePath, menu);
 		connect(action, &QAction::triggered, this, [&]() {onLoadRecentImage(imagePath); });
@@ -105,68 +91,68 @@ void AnnotationDesigner::updateColorAndFontWithSelectionValues()
 	}
 }
 
-void AnnotationDesigner::iniActions()
+void AnnotationDesigner::initActions()
 {
 	setAcceptDrops(true);
 
 	myZoomInAction = new QAction(QString("ZoomIn"), this);
 	myZoomInAction->setStatusTip("Zoom in");
 	myZoomInAction->setShortcut(QKeySequence::ZoomIn);
-	myZoomInAction->setIcon(QIcon(("ico/zoomIn.png")));
+	myZoomInAction->setIcon(QIcon((":/ico/zoomIn.png")));
 	connect(myZoomInAction, &QAction::triggered, this, &AnnotationDesigner::onZoomInAction);
 
 	myZoomOutAction = new QAction("ZoomOut", this);
 	myZoomOutAction->setStatusTip("Zoom out");
 	myZoomOutAction->setShortcut(QKeySequence::ZoomOut);
-	myZoomOutAction->setIcon(QIcon(("ico/zoomOut.png")));
+	myZoomOutAction->setIcon(QIcon((":/ico/zoomOut.png")));
 	connect(myZoomOutAction, &QAction::triggered, this, &AnnotationDesigner::onZoomOutAction);
 
 	my_showAboutAction = new QAction("About", this);
 	my_showAboutAction->setMenuRole(QAction::AboutRole);
 	my_showAboutAction->setStatusTip("About the app");
-	my_showAboutAction->setIcon(QIcon(("ico/about.png")));
+	my_showAboutAction->setIcon(QIcon((":/ico/about.png")));
 	connect(my_showAboutAction, &QAction::triggered, this, &AnnotationDesigner::onAboutAction);
 
 	my_selectAllItemsAction = new QAction("Select all", this);
 	my_selectAllItemsAction->setShortcut(QKeySequence::SelectAll);
 	my_selectAllItemsAction->setStatusTip("Select all annoations");
-	my_selectAllItemsAction->setIcon(QIcon(("ico/selectAll.png")));
+	my_selectAllItemsAction->setIcon(QIcon((":/ico/selectAll.png")));
 	connect(my_selectAllItemsAction, &QAction::triggered, this, &AnnotationDesigner::onSelectAllItemAction);
 
 	my_addAnnotationItemAction = new QAction("Add annotation", this);
 	////#my_addTextItemAction->setShortcut("Ctrl+L");
-	my_addAnnotationItemAction->setIcon(QIcon(("ico/add.png")));
+	my_addAnnotationItemAction->setIcon(QIcon((":/ico/add.png")));
 	my_addAnnotationItemAction->setStatusTip("Add annotation at mouse position");
 	connect(my_addAnnotationItemAction, &QAction::triggered, this, &AnnotationDesigner::onAddTextItemAction);
 
 	my_loadBackgroundImageAction = new QAction("Load background image", this);
 	my_loadBackgroundImageAction->setShortcut(QKeySequence("Ctrl+L"));
 	my_loadBackgroundImageAction->setStatusTip("Load background image");
-	my_loadBackgroundImageAction->setIcon(QIcon(("ico/open.png")));
+	my_loadBackgroundImageAction->setIcon(QIcon((":/ico/open.png")));
 	connect(my_loadBackgroundImageAction, &QAction::triggered, this, &AnnotationDesigner::onLoadBackgroundImageAction);
 
 	my_clearAllAnnotationsItemAction = new QAction("Clear all", this);
 	my_clearAllAnnotationsItemAction->setShortcut(QKeySequence("Ctrl+C"));
-	my_clearAllAnnotationsItemAction->setIcon(QIcon(("ico/clear.png")));
+	my_clearAllAnnotationsItemAction->setIcon(QIcon((":/ico/clear.png")));
 	my_clearAllAnnotationsItemAction->setStatusTip("Exit application");
 	connect(my_clearAllAnnotationsItemAction, &QAction::triggered, this, &AnnotationDesigner::onClearAllAnnotationsItemsAction);
 
 	my_exitAction = new QAction("Exit", this);
 	my_exitAction->setShortcut(QKeySequence::Quit);
 	my_exitAction->setStatusTip("Exit application");
-	my_exitAction->setIcon(QIcon(("ico/quit.png")));
+	my_exitAction->setIcon(QIcon((":/ico/quit.png")));
 	connect(my_exitAction, &QAction::triggered, this, &AnnotationDesigner::onExitAction);
 
 	my_saveAction = new QAction("Save", this);
 	my_saveAction->setShortcut(QKeySequence::Save);
 	my_saveAction->setStatusTip("Save picture");
-	my_saveAction->setIcon(QIcon(("ico/save.png")));
+	my_saveAction->setIcon(QIcon((":/ico/save.png")));
 	connect(my_saveAction, &QAction::triggered, this, &AnnotationDesigner::onSaveImageAction);
 
 	my_recentImagesAction = new QAction("Recent Images", this);
 	////#my_recentImagesAction->setShortcut(QKeySequence::Save);
 	my_recentImagesAction->setStatusTip("Recent images which have been loaded");
-	////#my_recentImagesAction->setIcon(QIcon(("ico/save.png")))
+	////#my_recentImagesAction->setIcon(QIcon((":/ico/save.png")))
 	////#connect(my_recentImagesAction, &QAction::triggered, this, &AnnotationDesigner::onSaveImageAction)
 }
 
@@ -213,7 +199,7 @@ void AnnotationDesigner::initSceneAndView()
 	QAction* deleteSelectionAction = new QAction("Delete", my_view);
 	deleteSelectionAction->setStatusTip("Delete selection");
 	deleteSelectionAction->setShortcut(QKeySequence::Delete);
-	deleteSelectionAction->setIcon(QIcon(("ico/delete.png")));
+	deleteSelectionAction->setIcon(QIcon((":/ico/delete.png")));
 	deleteSelectionAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
 	connect(deleteSelectionAction, &QAction::triggered, this, &AnnotationDesigner::onDeleteSelectionAction);
 
@@ -266,13 +252,13 @@ void AnnotationDesigner::initToolBar()
 	updateColorDialogAndColorButton();
 
 	my_zoomComboBox = new QComboBox();
-	for (int zommValue : my_zoomValues)
+	for (int zommValue : ourZoomValues)
 		my_zoomComboBox->addItem(QString("%1%").arg(zommValue));
 
 	connect(my_zoomComboBox, qOverload<int>(&QComboBox::activated), this, &AnnotationDesigner::onZoomComboBoxChanged);
 	updateZoomComboBox();
 
-	QToolBar* toolbar = addToolBar("Toolbar");
+	QToolBar* toolbar = addToolBar(tr("Toolbar"));
 	toolbar->setObjectName("toolbar");
 	toolbar->addAction(my_loadBackgroundImageAction);
 	toolbar->addAction(my_exitAction);
@@ -291,7 +277,7 @@ void AnnotationDesigner::initToolBar()
 
 void AnnotationDesigner::initAnnotationsDock()
 {
-	QDockWidget* annotationsDock = new QDockWidget("Annotations");
+	QDockWidget* annotationsDock = new QDockWidget(tr("Annotations"));
 	annotationsDock->setObjectName("annotationsDock");
 	annotationsDock->setFeatures(0);
 	QWidget* container = new QWidget();
@@ -299,23 +285,23 @@ void AnnotationDesigner::initAnnotationsDock()
 	container->setLayout(containerLayout);;
 
 	QPushButton* addNewTextButton = new QPushButton(container);
-	addNewTextButton->setText("Add");
-	addNewTextButton->setIcon(QIcon(("ico/add.png")));
+	addNewTextButton->setText(tr("Add"));
+	addNewTextButton->setIcon(QIcon((":/ico/add.png")));
 	connect(addNewTextButton, &QPushButton::clicked, this, &AnnotationDesigner::onAddNewTextButton);
 	containerLayout->addWidget(addNewTextButton);
 
 	my_annotationsList = new ListWidget(container);
 
-	QAction* deleteSelectionAction = new QAction("Delete", my_annotationsList);
+	QAction* deleteSelectionAction = new QAction(tr("Delete"), my_annotationsList);
 	deleteSelectionAction->setShortcut(QKeySequence::Delete);
-	deleteSelectionAction->setIcon(QIcon(("ico/delete.png")));
+	deleteSelectionAction->setIcon(QIcon((":/ico/delete.png")));
 	deleteSelectionAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
 	connect(deleteSelectionAction, &QAction::triggered, this, &AnnotationDesigner::onTextListWidgetDeleteSelectionAction);
 	my_annotationsList->addAction(deleteSelectionAction);
 
-	QAction* addTextAction = new QAction("Add", my_annotationsList);
+	QAction* addTextAction = new QAction(tr("Add"), my_annotationsList);
 	addTextAction->setShortcut(QKeySequence("+"));
-	addTextAction->setIcon(QIcon(("ico/add.png")));
+	addTextAction->setIcon(QIcon((":/ico/add.png")));
 	addTextAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
 	connect(addTextAction, &QAction::triggered, this, &AnnotationDesigner::onTextListWidgetAddAction);
 	my_annotationsList->addAction(addTextAction);
@@ -341,26 +327,12 @@ void AnnotationDesigner::onZoomOutAction()
 	zoomOut();
 }
 
-
-// doesnt work with visual ...
-// static const char* getCppVersion()
-// {
-// 	switch (__cplusplus)
-// 	{
-// 	case 201703L:	return "C++17\n";
-// 	case 201402L:	return "C++14\n";
-// 	case 201103L:	return "C++11\n";
-// 	case 199711L:	return "C++98\n";
-// 	default:		return "pre-standard C++\n";
-// 	}
-// }
-
 void AnnotationDesigner::onAboutAction()
 {
 	//Popup a box with about message.//
-	QString aboutTitle = QString("About %1").arg(qApp->applicationName());
-	QString aboutText = QString("Version %1\nMade by %2\nplatform\nQt %3")
-		.arg(qApp->applicationVersion(),qApp->organizationName(), qVersion());
+	QString aboutTitle = tr("About %1").arg(qApp->applicationName());
+	QString aboutText = tr("Version %1\nMade by %2\nplatform\nQt %3")
+		.arg(qApp->applicationVersion(), qApp->organizationName(), qVersion());
 
 	aboutText += "\t\t\t\t\t\t\t"; // stupid padding to force QMessageBox to get bigger width
 	QMessageBox::about(this, aboutTitle, aboutText);
@@ -368,7 +340,7 @@ void AnnotationDesigner::onAboutAction()
 
 void AnnotationDesigner::zoomIn()
 {
-	my_userZoomIndex = qMin(my_userZoomIndex + 1, (my_zoomValues.length()) - 1);
+	my_userZoomIndex = qMin(my_userZoomIndex + 1, (ourZoomValues.length()) - 1);
 	updateViewScale();
 	updateZoomComboBox();
 }
@@ -409,7 +381,7 @@ void AnnotationDesigner::onViewImageDrop(QString imagePath)
 
 void AnnotationDesigner::onTextListWidgetAddAction()
 {
-	QString newText = getUniqueNewAnnotationText("new");
+	QString newText = getUniqueNewAnnotationText(tr("new"));
 	my_userPredefinedAnnotations.append(newText);
 	updateAnnotationsTextList();
 	updateAddAnnotationItemActionSubMenu();
@@ -439,7 +411,7 @@ QString AnnotationDesigner::getUniqueNewAnnotationText(const QString& text)
 
 void AnnotationDesigner::onAddNewTextButton()
 {
-	QString newText = getUniqueNewAnnotationText("new");
+	QString newText = getUniqueNewAnnotationText(tr("new"));
 	my_userPredefinedAnnotations.append(newText);
 	updateAnnotationsTextList();
 	updateAddAnnotationItemActionSubMenu();
@@ -487,7 +459,7 @@ void AnnotationDesigner::createDefaultBackgroundImage()
 	painter.setBrush(Qt::gray);
 	painter.setPen(Qt::black);
 	painter.fillRect(pixmap.rect(), Qt::gray);
-	painter.drawText(pixmap.rect(), Qt::AlignCenter, "<No Image Loaded>");
+	painter.drawText(pixmap.rect(), Qt::AlignCenter, tr("<No Image Loaded>"));
 	painter.end();
 
 	addBackgroundImageItem(pixmap);
@@ -521,7 +493,7 @@ void AnnotationDesigner::loadBackgroundImage(const QString& path)
 			my_userRecentImagesPaths.pop_back();
 
 			updateRecentBackgroundImagesSubMenu();
-			statusBar()->showMessage(QString("image %1 loaded %2*%3").arg(path, pixmap.size().width(), pixmap.size().height()));
+			statusBar()->showMessage(tr("image %1 loaded %2*%3").arg(path, pixmap.size().width(), pixmap.size().height()));
 		}
 	}
 }
@@ -556,7 +528,7 @@ void AnnotationDesigner::onShowColorDialog()
 void AnnotationDesigner::onAddTextItemAction()
 {
 	//assert my_lastViewMouseRightClickPos
-	addAnnotationTextItem("default text", my_lastViewMouseRightClickPos);
+	addAnnotationTextItem(tr("default text"), my_lastViewMouseRightClickPos);
 }
 
 void AnnotationDesigner::onPredefinedAnnotationMenuItem(const QString& annotation)
@@ -610,7 +582,7 @@ void AnnotationDesigner::onLoadRecentImage(const QString& imagePath)
 void AnnotationDesigner::onLoadBackgroundImageAction()
 {
 	QString ext = "*.jpg";
-	QString fileName = QFileDialog::getOpenFileName(this, "Load image", "", getReadImageFormatWildcards(), &ext);
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Load image"), "", getReadImageFormatWildcards(), &ext);
 	if(!fileName.isEmpty())
 	{
 		loadBackgroundImage(fileName);
@@ -619,7 +591,7 @@ void AnnotationDesigner::onLoadBackgroundImageAction()
 
 QString AnnotationDesigner::getImageFormatWildcards(const QList<QByteArray>& imageFormats, bool splittedValue)
 {
-	//#"Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)"
+	//"Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)"
 
 	QString formatsWildcards;
 
@@ -650,6 +622,8 @@ QString AnnotationDesigner::getSaveImageFormatWildcards()
 	return getImageFormatWildcards(formats, true);
 }
 
+const QVector<int> AnnotationDesigner::ourZoomValues = { 10, 20, 50, 100, 120, 150, 200, 300, 400 };
+
 QString AnnotationDesigner::getReadImageFormatWildcards()
 {
 	QList<QByteArray> formats = QImageReader::supportedImageFormats();
@@ -665,16 +639,9 @@ void AnnotationDesigner::onSaveImageAction()
 {
 	if (!my_backgroundImageItem)
 	{
-		statusBar()->showMessage("no background image");
+		statusBar()->showMessage(tr("no background image"));
 		return;
 	}
-
-// 	static QString getSaveFileName(QWidget *parent = Q_NULLPTR,
-// 		const QString &caption = QString(),
-// 		const QString &dir = QString(),
-// 		const QString &filter = QString(),
-// 		QString *selectedFilter = Q_NULLPTR,
-// 		Options options = Options());
 
 	QString ext = "*.jpg";
 	QString saveFilename = QFileDialog::getSaveFileName(this, 
@@ -685,7 +652,6 @@ void AnnotationDesigner::onSaveImageAction()
 
 	if (saveFilename.isEmpty()) //# user canceled dialog
 		return;
-
 
 	my_lastSaveFolder = saveFilename;
 
@@ -700,9 +666,9 @@ void AnnotationDesigner::onSaveImageAction()
 	savedPixmapPainter.end();
 
 	if(saved)
-		statusBar()->showMessage(QString("image saved to \"%1\"").arg(saveFilename));
+		statusBar()->showMessage(tr("image saved to \"%1\"").arg(saveFilename));
 	else
-		statusBar()->showMessage(QString("failed to save to \"%1\"").arg(saveFilename));
+		statusBar()->showMessage(tr("failed to save to \"%1\"").arg(saveFilename));
 }
 
 void AnnotationDesigner::onClearAllAnnotationsItemsAction()
@@ -762,8 +728,9 @@ void AnnotationDesigner::onFontComboBoxChanged()
 
 void AnnotationDesigner::updateViewScale()
 {
-	float zoomPercent = my_zoomValues[my_userZoomIndex];
-	float zoomNormalized = zoomPercent / 100.0;
+	const int zoomPercent = ourZoomValues[my_userZoomIndex];
+	const float zoomNormalized =(float)zoomPercent / 100.f;
+
 	QTransform transform;
 	transform.scale(zoomNormalized, zoomNormalized);
 	my_view->setTransform(transform);
@@ -978,7 +945,8 @@ void GraphicsView::dropEvent(QDropEvent* aDropEvent)
 
 //////////////////////////////////////////////////////////////////////////
 
-ListWidget::ListWidget(QWidget *parent)
+ListWidget::ListWidget(QWidget* aParent)
+	: Super(aParent)
 {
 	setDragDropMode(QAbstractItemView::DragOnly);
 }
@@ -1001,7 +969,8 @@ QMimeData* ListWidget::mimeData(const QList<QListWidgetItem*> items) const
 
 const QEvent::Type TextItem::ourBeginEditableEventType = static_cast<QEvent::Type>(QEvent::registerEventType());
 
-TextItem::TextItem(QGraphicsItem* parent /*= nullptr*/)
+TextItem::TextItem(QGraphicsItem* aParent)
+: Super(aParent)
 {
 	setFlag(QGraphicsItem::ItemIsMovable);
 	setFlag(QGraphicsItem::ItemIsSelectable);
@@ -1020,7 +989,6 @@ void TextItem::focusOutEvent(QFocusEvent* aFocusEvent)
 	setTextInteractionFlags(Qt::NoTextInteraction);
 
 	Super::focusOutEvent(aFocusEvent);
-	//super(TextItem, self).focusOutEvent(event)
 }
 
 void TextItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* aMouseEvent)
@@ -1029,14 +997,12 @@ void TextItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* aMouseEvent)
 	QCoreApplication::instance()->postEvent(this, beginEditableEvent);
 
 	Super::mouseDoubleClickEvent(aMouseEvent);
-	//super(TextItem, self).mouseDoubleClickEvent(event);
 }
 
 bool TextItem::event(QEvent* anEvent)
 {
 	if (anEvent->type() == ourBeginEditableEventType && textInteractionFlags() == Qt::NoTextInteraction)
 	{
-		//#print "goeditable"
 		setTextInteractionFlags(Qt::TextEditorInteraction);
 		// 			#cursor = my_textCursor();
 		// 			#cursor.movePosition(QTextCursor.End);

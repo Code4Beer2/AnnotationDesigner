@@ -1,4 +1,16 @@
 <RCC>
-    <qresource prefix="AnnotationDesigner">
+    <qresource prefix="/">
+        <file>ico/about.png</file>
+        <file>ico/add.png</file>
+        <file>ico/app.ico</file>
+        <file>ico/app.png</file>
+        <file>ico/clear.png</file>
+        <file>ico/delete.png</file>
+        <file>ico/open.png</file>
+        <file>ico/quit.png</file>
+        <file>ico/save.png</file>
+        <file>ico/selectAll.png</file>
+        <file>ico/zoomIn.png</file>
+        <file>ico/zoomOut.png</file>
     </qresource>
 </RCC>
