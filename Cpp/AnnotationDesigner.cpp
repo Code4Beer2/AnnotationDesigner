@@ -279,7 +279,7 @@ void AnnotationDesigner::initAnnotationsDock()
 {
 	QDockWidget* annotationsDock = new QDockWidget(tr("Annotations"));
 	annotationsDock->setObjectName("annotationsDock");
-	annotationsDock->setFeatures(0);
+	annotationsDock->setFeatures(QDockWidget::DockWidgetFeatures());
 	QWidget* container = new QWidget();
 	QVBoxLayout* containerLayout = new QVBoxLayout();
 	container->setLayout(containerLayout);;
@@ -330,7 +330,8 @@ void AnnotationDesigner::onZoomOutAction()
 void AnnotationDesigner::onAboutAction()
 {
 	//Popup a box with about message.//
-	QString aboutTitle = tr("About %1").arg(qApp->applicationName());
+	const QString aboutTitle = tr("About %1").arg(qApp->applicationName());
+	
 	QString aboutText = tr("Version %1\nMade by %2\nplatform\nQt %3")
 		.arg(qApp->applicationVersion(), qApp->organizationName(), qVersion());
 
@@ -360,13 +361,9 @@ void AnnotationDesigner::onViewMouseRightClick(const QMouseEvent* anEvent)
 void AnnotationDesigner::onViewImageScrollZoom(int aWheelData)
 {
 	if (aWheelData > 0)
-	{
 		zoomIn();
-	}
-	else
-	{
+	else if (aWheelData < 0)
 		zoomOut();
-	}
 }
 
 void AnnotationDesigner::onViewTextDrop(QString aText, QPoint aViewPos)
@@ -401,11 +398,13 @@ QString AnnotationDesigner::getUniqueNewAnnotationText(const QString& text)
 {
 	QString newText = text;
 	int counter = 1;
-	for (auto newText : my_userPredefinedAnnotations)
+
+	while (my_userPredefinedAnnotations.contains(newText))
 	{
-		newText.sprintf("%s%d", text, counter);
+		newText = QString("%1%2").arg(text).arg(counter);
 		counter += 1;
 	}
+
 	return newText;
 }
 
@@ -493,7 +492,8 @@ void AnnotationDesigner::loadBackgroundImage(const QString& path)
 			my_userRecentImagesPaths.pop_back();
 
 			updateRecentBackgroundImagesSubMenu();
-			statusBar()->showMessage(tr("image %1 loaded %2*%3").arg(path, pixmap.size().width(), pixmap.size().height()));
+			const QString msg = tr("image %1 loaded %2*%3").arg(path).arg(pixmap.size().width()).arg(pixmap.size().height());
+			statusBar()->showMessage(msg);
 		}
 	}
 }
@@ -874,8 +874,10 @@ void GraphicsView::wheelEvent(QWheelEvent* aWheelEvent)
 	{
 		if (my_imageWheelZoomCallback)
 		{
-			const int delta = aWheelEvent->delta();
-			my_imageWheelZoomCallback(delta);
+			const QPoint angleDelta = aWheelEvent->angleDelta();
+			const int angleDeltaY = angleDelta.y();
+		
+			my_imageWheelZoomCallback(angleDeltaY);
 			aWheelEvent->accept();
 		}
 	}
@@ -951,7 +953,7 @@ ListWidget::ListWidget(QWidget* aParent)
 	setDragDropMode(QAbstractItemView::DragOnly);
 }
 
-QMimeData* ListWidget::mimeData(const QList<QListWidgetItem*> items) const
+QMimeData* ListWidget::mimeData(const QList<QListWidgetItem*>& items) const
 {
 	QMimeData* data = Super::mimeData(items);
 

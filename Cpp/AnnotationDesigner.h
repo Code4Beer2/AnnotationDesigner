@@ -3,8 +3,8 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QColorDialog>
 #include <QtWidgets/QGraphicsPixmapItem>
-#include <QtWidgets/QUndoStack>
-#include <QtWidgets/QAction>
+#include <QtGui/QUndoStack>
+#include <QtGui/QAction>
 #include <QtWidgets/QFontComboBox>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
@@ -84,7 +84,8 @@ class ListWidget : public QListWidget
 	Q_OBJECT
 public:
 	ListWidget(QWidget* aParent = nullptr);
-	QMimeData* mimeData(const QList<QListWidgetItem*> items) const override;
+
+	QMimeData* mimeData(const QList<QListWidgetItem*>& items) const override;
 };
 
 class AnnotationDesigner : public QMainWindow
